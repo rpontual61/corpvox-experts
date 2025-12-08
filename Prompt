@@ -1,0 +1,257 @@
+Quero que você implemente a área do Programa Experts CorpVox dentro do meu projeto existente, usando o schema public do Supabase e as tabelas abaixo.
+Não use Auth nativo do Supabase para os Experts. O login será feito via OTP próprio, com base em e-mail.
+•	Dashboard logado: experts.corpvox.com.br
+O objetivo dessa área é permitir:
+•	cadastro de Experts (parceiros)
+•	controle de qualificação do Expert
+•	exigência de conclusão de um curso rápido antes de liberar indicações
+•	cadastro e acompanhamento de indicações de empresas (oportunidades)
+•	cálculo e controle de benefícios financeiros por indicação válida
+•	envio de nota fiscal pelo Expert quando o benefício estiver liberado
+•	registro e acompanhamento de pagamentos ao Expert
+•	exibição de termos, políticas e conteúdos explicativos dentro do painel
+Quero que você crie toda a lógica necessária (banco, regras, backend e frontend) para que essa experiência funcione de ponta a ponta.
+ 
+1. Estrutura de banco de dados no schema public
+Crie ou ajuste as seguintes tabelas, exatamente com esses campos (você pode escolher tipos adequados: uuid, text, boolean, integer, numeric, timestamp, date, etc.):
+1.1. public.experts_users
+Campos:
+•	id
+•	email
+•	nome
+•	telefone_whatsapp
+•	tipo_perfil
+o	valores previstos: sst, business
+•	empresa_nome
+•	empresa_cnpj
+Pesquisa / pré-qualificação do Expert
+•	qtd_empresas_atendidas
+•	pode_emitir_nf
+•	possui_vinculo_clt
+•	detalhes_vinculo_clt
+Curso obrigatório
+•	curso_concluido
+•	curso_concluido_em
+Status do Expert
+•	status
+o	valores previstos: pendente, aprovado, reprovado, suspenso
+•	motivo_status
+Dados bancários (PIX)
+•	chave_pix_empresa
+•	tipo_chave_pix
+Termos e políticas
+•	aceitou_termo_adesao_em
+•	aceitou_termo_adesao_ip
+•	aceitou_politica_uso_em
+•	aceitou_politica_uso_ip
+Outros
+•	origem_cadastro
+o	exemplo: landing_sst, landing_business
+•	criado_em
+•	atualizado_em
+ 
+1.2. public.experts_otps
+Campos:
+•	id
+•	expert_id
+•	email
+•	codigo
+•	valido_ate
+•	usado
+•	criado_em
+Função: armazenar códigos OTP de login enviados por e-mail.
+Fluxo básico: gerar código, gravar, enviar e-mail, validar código, marcar como usado.
+ 
+1.3. public.experts_indications
+Campos:
+•	id
+•	expert_id
+•	empresa_nome
+•	empresa_cnpj
+•	contato_nome
+•	contato_email
+•	contato_whatsapp
+•	tipo_indicacao
+o	valores: relatorio_tecnico, email, whatsapp_conversa
+•	observacoes
+Status da indicação
+•	status
+o	valores previstos:
+	aguardando_validacao
+	validacao_recusada
+	em_contato
+	em_analise
+	contratou
+	beneficio_previsto
+	liberado_envio_nf
+	nf_enviada
+	pago
+•	motivo_recusa
+•	validada_em
+•	validada_por
+Regra dos 90 dias
+•	data_expiracao_indicacao
+•	expirou
+Vínculo com o cliente interno do CorpVox
+•	contrato_id
+o	referência para o contrato ou empresa no sistema principal (caso exista)
+Auditoria
+•	criado_em
+•	atualizado_em
+Observação importante: deve existir uma lógica que impede abuso, por exemplo, um Expert cadastrando milhares de CNPJs aleatórios. A indicação deve ser validada internamente (campo validada_por e validada_em) antes de seguir o fluxo de benefício.
+ 
+1.4. public.experts_benefits
+Campos:
+•	id
+•	expert_id
+•	indication_id
+Cálculo do benefício
+•	valor_mensalidade_cliente
+•	multiplicador_interno
+•	valor_beneficio
+O multiplicador_interno é definido internamente por mim (no banco) e não deve aparecer na interface do Expert.
+O valor_beneficio é calculado como valor_mensalidade_cliente * multiplicador_interno.
+Datas chave
+•	data_contrato_cliente
+•	data_primeiro_pagamento_cliente
+•	data_prevista_pagamento_beneficio
+•	pode_enviar_nf_a_partir_de
+Regra de pagamento:
+•	o pagamento ao Expert será feito no dia quinze do mês do primeiro pagamento do cliente
+•	a NF do Expert só pode ser enviada a partir do dia cinco desse mesmo mês
+•	use os campos pode_enviar_nf_a_partir_de e data_prevista_pagamento_beneficio para controlar isso
+Nota fiscal do Expert
+•	nf_enviada
+•	nf_data_emissao
+•	nf_valor
+•	nf_arquivo_url
+•	nf_enviada_em
+O Expert não precisa informar número da NF.
+Ele só informa data de emissão, valor e envia o arquivo PDF ou XML.
+A NF também deve ser enviada por e-mail para experts@corpvox.com.br.
+Pagamento ao Expert
+•	pagamento_realizado
+•	pagamento_data
+Auditoria
+•	criado_em
+•	atualizado_em
+ 
+2. Regras de negócio importantes
+1.	Um Expert só pode cadastrar indicações se:
+o	tiver status aprovado
+o	tiver curso_concluido = true
+o	tiver aceitado o termo de adesão e a política de uso
+o	tiver dados de PIX preenchidos
+2.	Toda indicação tem prazo de validade de 90 dias a partir de criado_em.
+o	Preencher data_expiracao_indicacao automaticamente em criado_em + 90 dias.
+o	Uma indicação expirada não deve gerar benefício, mesmo que a empresa contrate depois.
+3.	O valor do benefício sempre dependerá do valor real negociado com o cliente (valor_mensalidade_cliente) e do multiplicador interno (multiplicador_interno).
+o	O Expert vê apenas valor_beneficio, nunca o multiplicador.
+4.	O botão “Enviar NF” na interface do Expert só aparece quando:
+o	o status da indicação/benefício estiver em estado equivalente a “liberado_envio_nf”
+o	a data atual for maior ou igual a pode_enviar_nf_a_partir_de
+5.	O Expert não pode visualizar dados de outros Experts.
+Garanta isso ao desenhar as consultas e permissões.
+ 
+3. Fluxos principais da área logada
+Implemente a área logada com os seguintes blocos de navegação:
+•	Meu painel (dashboard)
+•	Minhas indicações
+•	Benefícios
+•	Como indicar
+•	Instruções de emissão de NF
+•	Meus dados
+•	Termo de adesão
+•	Política de uso e conduta
+3.1. Dashboard inicial
+Mostrar para o Expert:
+•	mensagem de boas-vindas
+•	resumo de indicações (quantidade e status)
+•	resumo de benefícios (previstos e pagos)
+•	alerta caso falte algo importante:
+o	curso não concluído
+o	dados PIX não preenchidos
+o	termo ou política ainda não aceitos
+Se curso_concluido = false, o dashboard deve deixar bem claro que ele precisa concluir o curso rápido antes de liberar o botão de cadastrar indicação.
+3.2. Minhas indicações
+Lista das indicações do Expert, com filtro por status e data.
+Campos principais na lista:
+•	empresa_nome
+•	empresa_cnpj
+•	tipo_indicacao
+•	status
+•	data da indicação
+•	data de expiração (se aplicável)
+Tela de detalhe da indicação pode mostrar mais campos, incluindo observações.
+3.3. Cadastrar nova indicação
+Formulário com:
+•	empresa_nome
+•	empresa_cnpj
+•	contato_nome
+•	contato_email
+•	contato_whatsapp
+•	tipo_indicacao
+o	relatorio_tecnico
+o	email
+o	whatsapp_conversa
+•	observacoes (opcional)
+Se o Expert não tiver curso concluído, não permitir acesso a essa tela ou bloquear o envio com mensagem clara.
+3.4. Benefícios
+Exibir uma lista com:
+•	empresa_nome
+•	valor_beneficio
+•	data_prevista_pagamento_beneficio
+•	status (por exemplo, aguardando envio de NF, NF enviada, pago)
+Quando pode_enviar_nf_a_partir_de for atendido, mostrar um botão “Enviar nota fiscal” que abre um formulário/modal para:
+•	nf_data_emissao
+•	nf_valor (já sugerido automaticamente com base em valor_beneficio)
+•	upload do arquivo (PDF ou XML)
+Após envio, marcar:
+•	nf_enviada = true
+•	nf_enviada_em com timestamp
+•	armazenar o arquivo em storage e salvar a URL em nf_arquivo_url
+3.5. Como indicar
+Página de instruções com textos prontos que o Expert pode copiar, explicando:
+•	como indicar no relatório NR 01
+•	como indicar por e-mail
+•	como indicar por WhatsApp ou conversa técnica
+Inclua exemplos de texto como:
+“A empresa não possui canal adequado conforme NR 01. Recomenda se a adoção de uma solução especializada. A Plataforma CorpVox é uma das opções disponíveis no mercado.”
+3.6. Instruções de emissão de NF
+Página com:
+•	dados da CorpVox Tecnologia da Informação Ltda
+•	modelo de descrição da NF
+•	orientações gerais sobre emissão (sem entrar em detalhe tributário técnico, apenas o necessário para emissão correta)
+•	reforço de que a NF deve ser enviada pelo painel e encaminhada também para experts@corpvox.com.br
+3.7. Meus dados
+Permitir que o Expert visualize e atualize:
+•	nome
+•	telefone_whatsapp
+•	empresa_nome
+•	empresa_cnpj
+•	qtd_empresas_atendidas
+•	chave_pix_empresa
+•	tipo_chave_pix
+Dados como status, curso_concluido, multiplicador ou campos internos não devem ser editáveis por ele.
+3.8. Termo de adesão e Política de uso
+Mostrar o texto do termo de adesão e da política de uso dentro da área logada, com:
+•	checkbox ou botão de “Li e aceito”
+•	registro de data e IP nos campos apropriados da tabela experts_users
+ 
+4. Login via OTP
+Implementar o fluxo:
+1.	Tela pede e-mail do Expert.
+2.	Gerar código OTP, salvar em experts_otps e enviar por e-mail.
+3.	Tela para digitar o código.
+4.	Validar se o código existe, não expirou, não está marcado como usado.
+5.	Ao validar, marcar como usado e criar sessão do usuário na aplicação.
+Não use o sistema de Auth nativo do Supabase para esses Experts. Use apenas o controle baseado nas tabelas experts_users e experts_otps.
+ 
+5. Considerações gerais
+•	Use o schema public e os nomes de tabela exatamente como descrito.
+•	Respeite o relacionamento entre experts_users, experts_indications e experts_benefits.
+•	Garanta que o Expert só veja seus próprios dados.
+•	Garanta que as regras de negócio sejam respeitadas na interface (por exemplo, bloqueio de cadastro de indicação se não concluiu o curso).
+•	Estruture o código de forma organizada, mantendo o fluxo completo da jornada do Expert dentro da área experts.corpvox.com.br.
+Implemente tudo de forma consistente e segura, e use essa descrição como fonte da verdade sobre o modelo de dados e o comportamento esperado da área dos Experts CorpVox.
+

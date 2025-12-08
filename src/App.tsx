@@ -1,27 +1,69 @@
 import { useEffect, useState } from 'react';
-import { supabase } from './lib/supabase';
-import { Session } from '@supabase/supabase-js';
+import { isExpertLoggedIn, getCurrentExpert, logoutExpert } from './lib/supabase';
+import { ExpertUser } from './types/database.types';
+import LoginPage from './components/auth/LoginPage';
+import OTPVerification from './components/auth/OTPVerification';
+import DashboardLayout from './components/dashboard/DashboardLayout';
+import Dashboard from './components/dashboard/Dashboard';
+import IndicationsPage from './components/indications/IndicationsPage';
+import BenefitsPage from './components/benefits/BenefitsPage';
+import CoursePage from './components/content/CoursePage';
+import HowToIndicatePage from './components/content/HowToIndicatePage';
+import MyDataPage from './components/content/MyDataPage';
+
+type AuthStep = 'login' | 'otp' | 'authenticated';
 
 function App() {
-  const [session, setSession] = useState<Session | null>(null);
+  const [authStep, setAuthStep] = useState<AuthStep>('login');
+  const [email, setEmail] = useState('');
+  const [expert, setExpert] = useState<ExpertUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+    // Check if expert is already logged in
+    const checkAuth = async () => {
+      if (isExpertLoggedIn()) {
+        const expertData = await getCurrentExpert();
+        if (expertData) {
+          setExpert(expertData);
+          setAuthStep('authenticated');
+        } else {
+          // Session exists but no expert found - clear session
+          logoutExpert();
+          setAuthStep('login');
+        }
+      } else {
+        setAuthStep('login');
+      }
       setLoading(false);
-    });
+    };
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
+    checkAuth();
   }, []);
+
+  const handleOTPSent = (userEmail: string) => {
+    setEmail(userEmail);
+    setAuthStep('otp');
+  };
+
+  const handleOTPSuccess = async () => {
+    const expertData = await getCurrentExpert();
+    if (expertData) {
+      setExpert(expertData);
+      setAuthStep('authenticated');
+    }
+  };
+
+  const handleBackToLogin = () => {
+    setEmail('');
+    setAuthStep('login');
+  };
+
+  const handleLogout = () => {
+    logoutExpert();
+    setExpert(null);
+    setAuthStep('login');
+  };
 
   if (loading) {
     return (
@@ -34,58 +76,58 @@ function App() {
     );
   }
 
-  if (!session) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-primary-600 mb-2">
-              CorpVox Experts
-            </h1>
-            <p className="text-text-secondary">
-              Plataforma de Especialistas
-            </p>
-          </div>
+  // Show login page
+  if (authStep === 'login') {
+    return <LoginPage onOTPSent={handleOTPSent} />;
+  }
 
-          <div className="space-y-4">
-            <p className="text-center text-text-muted">
-              Autenticação em desenvolvimento
-            </p>
-          </div>
-        </div>
-      </div>
+  // Show OTP verification
+  if (authStep === 'otp') {
+    return (
+      <OTPVerification
+        email={email}
+        onSuccess={handleOTPSuccess}
+        onBack={handleBackToLogin}
+      />
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-primary-600">
-              CorpVox Experts
-            </h1>
-            <button
-              onClick={() => supabase.auth.signOut()}
-              className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
-            >
-              Sair
-            </button>
-          </div>
-        </div>
-      </header>
+  // Authenticated - show dashboard
+  return <AuthenticatedApp expert={expert} onLogout={handleLogout} onUpdate={handleOTPSuccess} />;
+}
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold text-text-primary mb-4">
-            Bem-vindo ao CorpVox Experts
-          </h2>
-          <p className="text-text-secondary">
-            A plataforma está em desenvolvimento inicial.
-          </p>
-        </div>
-      </main>
-    </div>
+// Authenticated App Component
+function AuthenticatedApp({ expert, onLogout, onUpdate }: { expert: ExpertUser; onLogout: () => void; onUpdate: () => void }) {
+  const [currentPage, setCurrentPage] = useState('dashboard');
+
+  const renderPage = () => {
+    switch (currentPage) {
+      case 'dashboard':
+        return <Dashboard expert={expert} onNavigate={setCurrentPage} />;
+      case 'indicacoes':
+        return <IndicationsPage expert={expert} />;
+      case 'beneficios':
+        return <BenefitsPage expert={expert} />;
+      case 'curso':
+        return <CoursePage expert={expert} onUpdate={onUpdate} />;
+      case 'como-indicar':
+        return <HowToIndicatePage />;
+      case 'meus-dados':
+        return <MyDataPage expert={expert} onUpdate={onUpdate} />;
+      default:
+        return <Dashboard expert={expert} onNavigate={setCurrentPage} />;
+    }
+  };
+
+  return (
+    <DashboardLayout
+      expert={expert}
+      currentPage={currentPage}
+      onNavigate={setCurrentPage}
+      onLogout={onLogout}
+    >
+      {renderPage()}
+    </DashboardLayout>
   );
 }
 

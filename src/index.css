@@ -18,6 +18,10 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    font-size: 15px;
+  }
+  html {
+    font-size: 15px;
   }
 }
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { isExpertLoggedIn, getCurrentExpert, logoutExpert } from './lib/supabase';
+import { isExpertLoggedIn, getCurrentExpert, logoutExpert, supabase } from './lib/supabase';
 import { ExpertUser } from './types/database.types';
 import LoginPage from './components/auth/LoginPage';
 import OTPVerification from './components/auth/OTPVerification';
@@ -99,6 +99,30 @@ function App() {
 // Authenticated App Component
 function AuthenticatedApp({ expert, onLogout, onUpdate }: { expert: ExpertUser; onLogout: () => void; onUpdate: () => void }) {
   const [currentPage, setCurrentPage] = useState('dashboard');
+  const [totalIndicacoes, setTotalIndicacoes] = useState(0);
+  const [totalBeneficios, setTotalBeneficios] = useState(0);
+
+  useEffect(() => {
+    loadHeaderStats();
+  }, [expert.id]);
+
+  const loadHeaderStats = async () => {
+    // Load total indications
+    const { data: indications } = await supabase
+      .from('experts_indications')
+      .select('*')
+      .eq('expert_id', expert.id);
+
+    // Load total benefits received (pagamento_realizado = true)
+    const { data: benefits } = await supabase
+      .from('experts_benefits')
+      .select('*')
+      .eq('expert_id', expert.id)
+      .eq('pagamento_realizado', true);
+
+    setTotalIndicacoes(indications?.length || 0);
+    setTotalBeneficios(benefits?.reduce((sum, b) => sum + (b.valor_beneficio || 0), 0) || 0);
+  };
 
   const renderPage = () => {
     switch (currentPage) {
@@ -125,6 +149,8 @@ function AuthenticatedApp({ expert, onLogout, onUpdate }: { expert: ExpertUser; 
       currentPage={currentPage}
       onNavigate={setCurrentPage}
       onLogout={onLogout}
+      totalIndicacoes={totalIndicacoes}
+      totalBeneficios={totalBeneficios}
     >
       {renderPage()}
     </DashboardLayout>

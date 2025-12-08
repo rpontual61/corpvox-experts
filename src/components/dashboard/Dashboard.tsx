@@ -9,7 +9,8 @@ import {
   ArrowRight,
   GraduationCap,
   CreditCard,
-  FileCheck
+  FileCheck,
+  BookOpen
 } from 'lucide-react';
 import { ExpertUser } from '../../types/database.types';
 import { supabase, formatCurrency, getIndicationStatusColor, getIndicationStatusDisplay } from '../../lib/supabase';
@@ -154,18 +155,131 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
         </p>
       </div>
 
-      {/* Setup Alert */}
+      {/* Hero Box with Message */}
+      <div className="bg-primary-50 border border-primary-200 rounded-xl overflow-hidden relative">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Left Column - Message and Steps */}
+          <div className="p-8">
+            {/* Message */}
+            <div className="mb-8">
+              <h3 className="text-2xl font-bold text-text-primary mb-3">
+                Você já influencia muitas empresas.
+              </h3>
+              <h4 className="text-xl font-semibold text-primary-600 mb-4">
+                Agora é hora de receber uma renda extra por isso.
+              </h4>
+              <p className="text-text-secondary text-base">
+                Compartilhe a CorpVox com empresas que você conhece e receba benefícios por cada contratação.
+              </p>
+            </div>
+
+            {/* Steps - How it works */}
+            <div>
+              <div className="space-y-4">
+                <div className="flex items-start space-x-3">
+                  <div className="w-10 h-10 bg-primary-600 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-white font-bold">1</span>
+                  </div>
+                  <div>
+                    <h5 className="font-semibold text-text-primary mb-1">Indique uma empresa</h5>
+                    <p className="text-sm text-text-secondary">Cadastre os dados da empresa que você deseja indicar</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <div className="w-10 h-10 bg-primary-600 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-white font-bold">2</span>
+                  </div>
+                  <div>
+                    <h5 className="font-semibold text-text-primary mb-1">Aguarde o contato</h5>
+                    <p className="text-sm text-text-secondary">Nossa equipe entrará em contato com a empresa indicada</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <div className="w-10 h-10 bg-primary-600 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-white font-bold">3</span>
+                  </div>
+                  <div>
+                    <h5 className="font-semibold text-text-primary mb-1">Receba seus benefícios</h5>
+                    <p className="text-sm text-text-secondary">Quando a empresa contratar, você recebe sua recompensa</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - SST Image */}
+          <div className="hidden md:flex items-end justify-end h-full">
+            <img
+              src="/sst_cropped.png"
+              alt="Expert SST"
+              className="object-contain object-bottom h-full"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Cards Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          {/* Total Benefícios */}
+          <div className="bg-gradient-to-br from-primary-600 to-primary-700 rounded-xl shadow-sm p-6 text-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <DollarSign className="w-6 h-6 text-white" />
+                <p className="text-sm font-medium opacity-90">
+                  Total de Benefícios
+                </p>
+              </div>
+              <p className="text-3xl font-bold">
+                {formatCurrency(stats.totalBeneficios)}
+              </p>
+            </div>
+          </div>
+
+          {/* Total Indicações */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <FileText className="w-6 h-6 text-gray-700" />
+                <p className="text-sm text-text-muted">
+                  Total de Indicações
+                </p>
+              </div>
+              <p className="text-2xl font-bold text-text-primary">
+                {stats.totalIndicacoes}
+              </p>
+            </div>
+          </div>
+
+          {/* Empresas Contratantes */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <CheckCircle2 className="w-6 h-6 text-gray-700" />
+                <p className="text-sm text-text-muted">
+                  Empresas Contratantes
+                </p>
+              </div>
+              <p className="text-2xl font-bold text-text-primary">
+                {stats.contratadas}
+              </p>
+            </div>
+          </div>
+      </div>
+
+      {/* Setup Tasks - only shown if user needs to complete setup */}
       {needsSetup && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
+        <div className="bg-orange-50 border border-orange-200 rounded-xl p-6 mb-8">
           <div className="flex items-start space-x-4">
             <div className="flex-shrink-0">
-              <AlertCircle className="w-6 h-6 text-yellow-600" />
+              <AlertCircle className="w-6 h-6 text-orange-600" />
             </div>
             <div className="flex-1">
-              <h3 className="text-base font-semibold text-yellow-900 mb-2">
+              <h3 className="text-base font-semibold text-orange-900 mb-2">
                 Complete seu cadastro para começar a indicar
               </h3>
-              <p className="text-sm text-yellow-800 mb-4">
+              <p className="text-sm text-orange-800 mb-4">
                 Você precisa completar algumas etapas antes de poder fazer indicações:
               </p>
               <div className="space-y-2">
@@ -175,20 +289,20 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
                     <button
                       key={task.id}
                       onClick={() => onNavigate(task.page)}
-                      className="w-full flex items-center justify-between p-3 bg-white rounded-lg hover:bg-yellow-50 transition-colors"
+                      className="w-full flex items-center justify-between p-3 bg-white rounded-lg hover:bg-orange-50 transition-colors"
                     >
                       <div className="flex items-center space-x-3">
                         {task.completed ? (
                           <CheckCircle2 className="w-5 h-5 text-green-600" />
                         ) : (
-                          <Icon className="w-5 h-5 text-yellow-600" />
+                          <Icon className="w-5 h-5 text-orange-600" />
                         )}
-                        <span className={`text-sm font-medium ${task.completed ? 'text-green-900 line-through' : 'text-yellow-900'}`}>
+                        <span className={`text-sm font-medium ${task.completed ? 'text-green-900 line-through' : 'text-orange-900'}`}>
                           {task.label}
                         </span>
                       </div>
                       {!task.completed && (
-                        <ArrowRight className="w-4 h-4 text-yellow-600" />
+                        <ArrowRight className="w-4 h-4 text-orange-600" />
                       )}
                     </button>
                   );
@@ -199,119 +313,40 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
         </div>
       )}
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Total Indicações */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
-              <FileText className="w-6 h-6 text-primary-600" />
-            </div>
-            <TrendingUp className="w-5 h-5 text-green-500" />
-          </div>
-          <p className="text-2xl font-bold text-text-primary mb-1">
-            {stats.totalIndicacoes}
-          </p>
-          <p className="text-sm text-text-muted">
-            Total de Indicações
-          </p>
-        </div>
-
-        {/* Aguardando Validação */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-              <Clock className="w-6 h-6 text-yellow-600" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold text-text-primary mb-1">
-            {stats.aguardandoValidacao}
-          </p>
-          <p className="text-sm text-text-muted">
-            Aguardando Validação
-          </p>
-        </div>
-
-        {/* Em Processo */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold text-text-primary mb-1">
-            {stats.emProcesso}
-          </p>
-          <p className="text-sm text-text-muted">
-            Em Processo
-          </p>
-        </div>
-
-        {/* Contratadas */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <CheckCircle2 className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold text-text-primary mb-1">
-            {stats.contratadas}
-          </p>
-          <p className="text-sm text-text-muted">
-            Contratadas
-          </p>
-        </div>
-      </div>
-
-      {/* Financial Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Total Benefícios */}
-        <div className="bg-gradient-to-br from-primary-600 to-primary-700 rounded-xl shadow-sm p-6 text-white">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-5 h-5" />
-            </div>
-            <p className="text-sm font-medium opacity-90">
-              Total de Benefícios
-            </p>
-          </div>
-          <p className="text-3xl font-bold">
-            {formatCurrency(stats.totalBeneficios)}
-          </p>
-        </div>
-
+      {/* Financial Quick Info */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Próximo Pagamento */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-5 h-5 text-green-600" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <DollarSign className="w-6 h-6 text-gray-700" />
+              <p className="text-sm text-text-muted">
+                Próximo Pagamento
+              </p>
             </div>
-            <p className="text-sm font-medium text-text-primary">
-              Próximo Pagamento
+            <p className="text-2xl font-bold text-text-primary">
+              {formatCurrency(stats.proximoPagamento)}
             </p>
           </div>
-          <p className="text-2xl font-bold text-text-primary">
-            {formatCurrency(stats.proximoPagamento)}
-          </p>
         </div>
 
         {/* Aguardando NF */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-              <FileText className="w-5 h-5 text-orange-600" />
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center space-x-3">
+              <FileText className="w-6 h-6 text-gray-700" />
+              <p className="text-sm text-text-muted">
+                Aguardando NF
+              </p>
             </div>
-            <p className="text-sm font-medium text-text-primary">
-              Aguardando NF
+            <p className="text-2xl font-bold text-text-primary">
+              {stats.aguardandoNF}
             </p>
           </div>
-          <p className="text-2xl font-bold text-text-primary">
-            {stats.aguardandoNF}
-          </p>
           {stats.aguardandoNF > 0 && (
             <button
               onClick={() => onNavigate('beneficios')}
-              className="mt-3 text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center space-x-1"
+              className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center space-x-1"
             >
               <span>Ver benefícios</span>
               <ArrowRight className="w-4 h-4" />

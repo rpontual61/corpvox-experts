@@ -8,6 +8,7 @@ import Dashboard from './components/dashboard/Dashboard';
 import IndicationsPage from './components/indications/IndicationsPage';
 import BenefitsPage from './components/benefits/BenefitsPage';
 import CoursePage from './components/content/CoursePage';
+import LoadingSpinner from './components/LoadingSpinner';
 import HowToIndicatePage from './components/content/HowToIndicatePage';
 import MyDataPage from './components/content/MyDataPage';
 
@@ -68,10 +69,7 @@ function App() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-text-secondary">Carregando...</p>
-        </div>
+        <LoadingSpinner size="lg" message="Carregando..." />
       </div>
     );
   }

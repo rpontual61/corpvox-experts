@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, Filter, Calendar, Building2, User, Phone, Mail, X } from 'lucide-react';
+import { Plus, Search, Filter, Calendar, Building2, User, Phone, Mail, X, AlertCircle, CheckCircle2, ArrowRight, GraduationCap, CreditCard } from 'lucide-react';
 import { ExpertUser, ExpertIndication } from '../../types/database.types';
 import { supabase, formatDate, formatCNPJ, validateCNPJ, getIndicationStatusColor, getIndicationStatusDisplay, canCreateIndications, getClientIP } from '../../lib/supabase';
+import LoadingSpinner from '../LoadingSpinner';
 
 interface IndicationsPageProps {
   expert: ExpertUser;
+  onNavigate?: (page: string) => void;
 }
 
 type ViewMode = 'list' | 'new';
 
-export default function IndicationsPage({ expert }: IndicationsPageProps) {
+export default function IndicationsPage({ expert, onNavigate }: IndicationsPageProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [indications, setIndications] = useState<ExpertIndication[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,7 +60,7 @@ export default function IndicationsPage({ expert }: IndicationsPageProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+        <LoadingSpinner message="Carregando indicações..." />
       </div>
     );
   }
@@ -89,12 +91,65 @@ export default function IndicationsPage({ expert }: IndicationsPageProps) {
         </button>
       </div>
 
-      {/* Alert if can't indicate */}
+      {/* Setup Tasks - only shown if user needs to complete setup */}
       {!canIndicate && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <p className="text-sm text-yellow-800">
-            Complete seu cadastro (curso, PIX e termos) para poder fazer indicações.
-          </p>
+        <div className="bg-orange-50 border border-orange-200 rounded-xl p-6">
+          <div className="flex items-start space-x-4">
+            <div className="flex-shrink-0">
+              <AlertCircle className="w-6 h-6 text-orange-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-base font-semibold text-orange-900 mb-2">
+                Faltam poucos passos para você começar a indicar
+              </h3>
+              <p className="text-sm text-orange-800 mb-4">
+                Você precisa completar algumas etapas antes de poder fazer indicações:
+              </p>
+              <div className="space-y-2">
+                {/* Task: Complete Course */}
+                <button
+                  onClick={() => onNavigate?.('curso')}
+                  disabled={expert.curso_concluido}
+                  className="w-full flex items-center justify-between p-3 bg-white rounded-lg hover:bg-gray-50 transition-colors disabled:cursor-default disabled:hover:bg-white"
+                >
+                  <div className="flex items-center space-x-3">
+                    {expert.curso_concluido ? (
+                      <CheckCircle2 className="w-5 h-5 text-green-600" />
+                    ) : (
+                      <GraduationCap className="w-5 h-5 text-orange-600" />
+                    )}
+                    <span className={`text-sm font-medium ${expert.curso_concluido ? 'text-green-900 line-through' : 'text-orange-900'}`}>
+                      Leitura do Guia Essencial Expert (10 min)
+                    </span>
+                  </div>
+                  {!expert.curso_concluido && (
+                    <ArrowRight className="w-4 h-4 text-orange-600" />
+                  )}
+                </button>
+
+                {/* Task: Register PIX */}
+                <button
+                  onClick={() => onNavigate?.('meus-dados')}
+                  disabled={!!expert.chave_pix_empresa}
+                  className="w-full flex items-center justify-between p-3 bg-white rounded-lg hover:bg-gray-50 transition-colors disabled:cursor-default disabled:hover:bg-white"
+                >
+                  <div className="flex items-center space-x-3">
+                    {expert.chave_pix_empresa ? (
+                      <CheckCircle2 className="w-5 h-5 text-green-600" />
+                    ) : (
+                      <CreditCard className="w-5 h-5 text-orange-600" />
+                    )}
+                    <span className={`text-sm font-medium ${expert.chave_pix_empresa ? 'text-green-900 line-through' : 'text-orange-900'}`}>
+                      Cadastrar chave PIX
+                    </span>
+                  </div>
+                  {!expert.chave_pix_empresa && (
+                    <ArrowRight className="w-4 h-4 text-orange-600" />
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -139,17 +194,17 @@ export default function IndicationsPage({ expert }: IndicationsPageProps) {
       {/* Indications List */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {filteredIndications.length === 0 ? (
-          <div className="px-6 py-12 text-center">
-            <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-text-muted mb-2">
+          <div className="px-6 py-8 text-center">
+            <Building2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-sm text-text-muted mb-4">
               {searchTerm || statusFilter !== 'all'
                 ? 'Nenhuma indicação encontrada'
-                : 'Você ainda não fez nenhuma indicação'}
+                : 'Você ainda não fez nenhuma indicação.'}
             </p>
             {canIndicate && !searchTerm && statusFilter === 'all' && (
               <button
                 onClick={() => setViewMode('new')}
-                className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm"
               >
                 Fazer primeira indicação
               </button>

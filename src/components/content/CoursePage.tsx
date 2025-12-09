@@ -41,7 +41,7 @@ export default function CoursePage({ expert, onUpdate }: CoursePageProps) {
         {/* Header */}
         <div>
           <h2 className="text-2xl font-bold text-text-primary">
-            Curso Obrigatório
+            Guia Essencial
           </h2>
           <p className="text-text-secondary mt-1">
             Treinamento do Programa Experts
@@ -77,7 +77,7 @@ export default function CoursePage({ expert, onUpdate }: CoursePageProps) {
           Parabéns!
         </h3>
         <p className="text-text-secondary">
-          Você concluiu o curso obrigatório com sucesso.
+          Você concluiu a leitura do Guia Essencial com sucesso.
         </p>
       </div>
     );
@@ -88,10 +88,10 @@ export default function CoursePage({ expert, onUpdate }: CoursePageProps) {
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-text-primary">
-          Curso Obrigatório
+          Guia Essencial
         </h2>
         <p className="text-text-secondary mt-1">
-          Complete este curso para começar a indicar
+          Complete este guia para começar a indicar
         </p>
       </div>
 

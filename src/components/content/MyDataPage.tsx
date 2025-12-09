@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Save, User, Building2, CreditCard, FileCheck, AlertCircle } from 'lucide-react';
+import { Save, User, Building2, CreditCard, FileCheck, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { ExpertUser } from '../../types/database.types';
 import { supabase, getClientIP } from '../../lib/supabase';
+import { DocumentModal } from '../modals/DocumentModal';
+import { PolicyContent, TermoAdesaoContent } from './PolicyContent';
 
 interface MyDataPageProps {
   expert: ExpertUser;
@@ -24,6 +26,7 @@ export default function MyDataPage({ expert, onUpdate }: MyDataPageProps) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+  const [modalOpen, setModalOpen] = useState<'termo' | 'politica' | null>(null);
 
   const handleSaveData = async () => {
     setLoading(true);
@@ -152,38 +155,28 @@ export default function MyDataPage({ expert, onUpdate }: MyDataPageProps) {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
-              Tipo de Perfil
-            </label>
-            <select
-              value={expert.tipo_perfil || 'sst'}
-              disabled
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-text-muted"
-            >
-              <option value="sst">SST</option>
-              <option value="business">Business</option>
-            </select>
-          </div>
         </div>
       </div>
 
       {/* Company Data */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center space-x-3 mb-6">
-          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-            <Building2 className="w-5 h-5 text-blue-600" />
+        <div className="flex items-center space-x-3 mb-2">
+          <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+            <Building2 className="w-5 h-5 text-primary-600" />
           </div>
           <h3 className="text-lg font-semibold text-text-primary">
-            Dados da Empresa
+            Dados da Empresa que emitirá as notas fiscais
           </h3>
         </div>
+
+        <p className="text-sm text-text-secondary mb-6">
+          Preencha abaixo os dados da empresa que emitirá a nota fiscal para recebimento dos seus benefícios do Programa Experts.
+        </p>
 
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-text-primary mb-2">
-              Nome da Empresa
+              Razão social
             </label>
             <input
               type="text"
@@ -212,8 +205,8 @@ export default function MyDataPage({ expert, onUpdate }: MyDataPageProps) {
       {/* PIX Data */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center space-x-3 mb-6">
-          <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-            <CreditCard className="w-5 h-5 text-green-600" />
+          <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+            <CreditCard className="w-5 h-5 text-primary-600" />
           </div>
           <h3 className="text-lg font-semibold text-text-primary">
             Dados para Pagamento (PIX)
@@ -239,7 +232,6 @@ export default function MyDataPage({ expert, onUpdate }: MyDataPageProps) {
               onChange={(e) => setFormData({ ...formData, tipo_chave_pix: e.target.value as any })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
-              <option value="cpf">CPF</option>
               <option value="cnpj">CNPJ</option>
               <option value="email">E-mail</option>
               <option value="telefone">Telefone</option>
@@ -263,17 +255,66 @@ export default function MyDataPage({ expert, onUpdate }: MyDataPageProps) {
       </div>
 
       {/* Terms */}
-      {(!expert.aceitou_termo_adesao_em || !expert.aceitou_politica_uso_em) && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center space-x-3 mb-6">
-            <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-              <FileCheck className="w-5 h-5 text-red-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-text-primary">
-              Termos e Políticas
-            </h3>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center space-x-3 mb-6">
+          <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+            <FileCheck className="w-5 h-5 text-primary-600" />
           </div>
+          <h3 className="text-lg font-semibold text-text-primary">
+            Termos e Políticas
+          </h3>
+        </div>
 
+        {expert.aceitou_termo_adesao_em && expert.aceitou_politica_uso_em ? (
+          <div className="space-y-4">
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-start space-x-3">
+                <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm text-green-800 font-medium mb-2">
+                    Termos aceitos com sucesso
+                  </p>
+                  <div className="space-y-1">
+                    <p className="text-xs text-green-700">
+                      <span className="font-medium">Termo de Adesão:</span> {new Date(expert.aceitou_termo_adesao_em).toLocaleDateString('pt-BR')} às {new Date(expert.aceitou_termo_adesao_em).toLocaleTimeString('pt-BR')}
+                    </p>
+                    <p className="text-xs text-green-700">
+                      <span className="font-medium">Política de Uso:</span> {new Date(expert.aceitou_politica_uso_em).toLocaleDateString('pt-BR')} às {new Date(expert.aceitou_politica_uso_em).toLocaleTimeString('pt-BR')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-start space-x-3">
+                <input
+                  type="checkbox"
+                  checked={true}
+                  disabled
+                  className="mt-1 w-4 h-4 text-primary-600 border-gray-300 rounded opacity-50 cursor-not-allowed"
+                  style={{ accentColor: '#653580' }}
+                />
+                <span className="text-sm text-text-secondary">
+                  Li e aceito o <button type="button" onClick={() => setModalOpen('termo')} className="text-primary-600 hover:text-primary-700 underline">Termo de Adesão</button> do Programa Experts
+                </span>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <input
+                  type="checkbox"
+                  checked={true}
+                  disabled
+                  className="mt-1 w-4 h-4 text-primary-600 border-gray-300 rounded opacity-50 cursor-not-allowed"
+                  style={{ accentColor: '#653580' }}
+                />
+                <span className="text-sm text-text-secondary">
+                  Li e aceito a <button type="button" onClick={() => setModalOpen('politica')} className="text-primary-600 hover:text-primary-700 underline">Política de Uso</button> da plataforma
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : (
           <div className="space-y-4">
             <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
               <div className="flex items-start space-x-3 mb-4">
@@ -292,7 +333,7 @@ export default function MyDataPage({ expert, onUpdate }: MyDataPageProps) {
                 className="mt-1 w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
               />
               <span className="text-sm text-text-secondary">
-                Li e aceito o <a href="#" className="text-primary-600 hover:text-primary-700 underline">Termo de Adesão</a> do Programa Experts
+                Li e aceito o <button type="button" onClick={() => setModalOpen('termo')} className="text-primary-600 hover:text-primary-700 underline">Termo de Adesão</button> do Programa Experts
               </span>
             </label>
 
@@ -304,7 +345,7 @@ export default function MyDataPage({ expert, onUpdate }: MyDataPageProps) {
                 className="mt-1 w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
               />
               <span className="text-sm text-text-secondary">
-                Li e aceito a <a href="#" className="text-primary-600 hover:text-primary-700 underline">Política de Uso</a> da plataforma
+                Li e aceito a <button type="button" onClick={() => setModalOpen('politica')} className="text-primary-600 hover:text-primary-700 underline">Política de Uso</button> da plataforma
               </span>
             </label>
 
@@ -316,8 +357,8 @@ export default function MyDataPage({ expert, onUpdate }: MyDataPageProps) {
               {loading ? 'Salvando...' : 'Aceitar Termos'}
             </button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Messages */}
       {error && (
@@ -341,12 +382,23 @@ export default function MyDataPage({ expert, onUpdate }: MyDataPageProps) {
         {loading ? (
           <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
         ) : (
-          <>
-            <Save className="w-5 h-5" />
-            <span>Salvar Alterações</span>
-          </>
+          <span>Salvar Alterações</span>
         )}
       </button>
+
+      {/* Modals */}
+      <DocumentModal
+        isOpen={modalOpen === 'termo'}
+        onClose={() => setModalOpen(null)}
+        title="Termo de Adesão do Programa Experts"
+        content={<TermoAdesaoContent />}
+      />
+      <DocumentModal
+        isOpen={modalOpen === 'politica'}
+        onClose={() => setModalOpen(null)}
+        title="Política de Uso e Conduta"
+        content={<PolicyContent />}
+      />
     </div>
   );
 }

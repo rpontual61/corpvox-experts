@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { DollarSign, Upload, CheckCircle2, Clock, FileText, Calendar, AlertCircle } from 'lucide-react';
 import { ExpertUser, ExpertBenefit, ExpertIndication } from '../../types/database.types';
 import { supabase, formatCurrency, formatDate, uploadExpertNF } from '../../lib/supabase';
+import LoadingSpinner from '../LoadingSpinner';
 
 interface BenefitsPageProps {
   expert: ExpertUser;
@@ -60,7 +61,7 @@ export default function BenefitsPage({ expert }: BenefitsPageProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+        <LoadingSpinner message="Carregando benefícios..." />
       </div>
     );
   }
@@ -275,7 +276,10 @@ function BenefitCard({
           </div>
           <label className="flex items-center justify-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors cursor-pointer">
             {uploading ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Enviando...</span>
+              </>
             ) : (
               <>
                 <Upload className="w-5 h-5" />

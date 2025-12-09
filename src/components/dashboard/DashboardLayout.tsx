@@ -40,7 +40,7 @@ export default function DashboardLayout({ children, expert, currentPage, onNavig
     { id: 'dashboard', icon: LayoutDashboard, label: 'Meu Painel', badge: needsAttention },
     { id: 'indicacoes', icon: FileText, label: 'Minhas Indicações' },
     { id: 'beneficios', icon: DollarSign, label: 'Meus Benefícios' },
-    { id: 'curso', icon: GraduationCap, label: 'Curso Obrigatório', badge: !expert.curso_concluido },
+    { id: 'curso', icon: GraduationCap, label: 'Guia Essencial', badge: !expert.curso_concluido },
     { id: 'como-indicar', icon: BookOpen, label: 'Como Indicar' },
     { id: 'meus-dados', icon: User, label: 'Meus Dados' },
   ];
@@ -129,7 +129,7 @@ export default function DashboardLayout({ children, expert, currentPage, onNavig
                         <span>{item.label}</span>
                       </div>
                       {item.badge && (
-                        <div className="w-2 h-2 bg-yellow-400 rounded-full" />
+                        <div className="w-2 h-2 bg-white rounded-full" />
                       )}
                     </button>
                   </li>

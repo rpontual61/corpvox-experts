@@ -10,10 +10,18 @@ import {
   GraduationCap,
   CreditCard,
   FileCheck,
-  BookOpen
+  BookOpen,
+  ClipboardCheck,
+  UserPlus,
+  Headphones,
+  Gift,
+  Plus,
+  Minus
 } from 'lucide-react';
-import { ExpertUser } from '../../types/database.types';
+import { ExpertUser, ExpertBenefit } from '../../types/database.types';
 import { supabase, formatCurrency, getIndicationStatusColor, getIndicationStatusDisplay } from '../../lib/supabase';
+import { PolicyModal } from '../modals/PolicyModal';
+import LoadingSpinner from '../LoadingSpinner';
 
 interface DashboardProps {
   expert: ExpertUser;
@@ -37,6 +45,12 @@ interface RecentIndication {
   criado_em: string;
 }
 
+interface BenefitWithIndication extends ExpertBenefit {
+  indication?: {
+    empresa_nome: string;
+  };
+}
+
 export default function Dashboard({ expert, onNavigate }: DashboardProps) {
   const [stats, setStats] = useState<Stats>({
     totalIndicacoes: 0,
@@ -48,7 +62,17 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
     aguardandoNF: 0,
   });
   const [recentIndications, setRecentIndications] = useState<RecentIndication[]>([]);
+  const [recentBenefits, setRecentBenefits] = useState<BenefitWithIndication[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showPolicyModal, setShowPolicyModal] = useState(false);
+  const [isHeroExpanded, setIsHeroExpanded] = useState(true);
+
+  // Check if user needs to accept policy
+  useEffect(() => {
+    if (!expert.aceitou_politica_uso_em) {
+      setShowPolicyModal(true);
+    }
+  }, [expert.aceitou_politica_uso_em]);
 
   useEffect(() => {
     loadDashboardData();
@@ -63,11 +87,16 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
         .eq('expert_id', expert.id)
         .order('criado_em', { ascending: false });
 
-      // Load benefits
+      // Load benefits with indication data
       const { data: benefits } = await supabase
         .from('experts_benefits')
-        .select('*')
-        .eq('expert_id', expert.id);
+        .select(`
+          *,
+          indication:experts_indications(empresa_nome)
+        `)
+        .eq('expert_id', expert.id)
+        .order('criado_em', { ascending: false })
+        .limit(10);
 
       // Calculate stats
       const totalIndicacoes = indications?.length || 0;
@@ -97,6 +126,14 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
 
       // Set recent indications
       setRecentIndications((indications || []).slice(0, 5));
+
+      // Set recent benefits
+      const benefitsData = (benefits || []).map(item => ({
+        ...item,
+        indication: Array.isArray(item.indication) ? item.indication[0] : item.indication
+      })) as BenefitWithIndication[];
+      setRecentBenefits(benefitsData);
+
       setLoading(false);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -104,18 +141,52 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
     }
   };
 
+  const handlePolicyAccept = async () => {
+    try {
+      // Get user IP address
+      let userIp = 'unknown';
+      try {
+        const ipResponse = await fetch('https://api.ipify.org?format=json');
+        const ipData = await ipResponse.json();
+        userIp = ipData.ip;
+      } catch (error) {
+        console.error('Error fetching IP:', error);
+      }
+
+      // Update expert with policy acceptance
+      const { error } = await supabase
+        .from('experts_users')
+        .update({
+          aceitou_politica_uso_em: new Date().toISOString(),
+          aceitou_politica_uso_ip: userIp,
+        })
+        .eq('id', expert.id);
+
+      if (error) {
+        console.error('Error saving policy acceptance:', error);
+        alert('Erro ao registrar aceite da política. Por favor, tente novamente.');
+        return;
+      }
+
+      // Close modal and reload page to get updated expert data
+      setShowPolicyModal(false);
+      window.location.reload();
+    } catch (error) {
+      console.error('Error accepting policy:', error);
+      alert('Erro ao registrar aceite da política. Por favor, tente novamente.');
+    }
+  };
+
   // Check if expert needs to complete setup
   const needsSetup =
     !expert.curso_concluido ||
-    !expert.chave_pix_empresa ||
-    !expert.aceitou_termo_adesao_em ||
-    !expert.aceitou_politica_uso_em;
+    !expert.chave_pix_empresa;
 
   const setupTasks = [
     {
       id: 'curso',
       completed: expert.curso_concluido,
-      label: 'Concluir curso obrigatório',
+      label: 'Leitura do Guia Essencial Expert (10 min)',
       icon: GraduationCap,
       page: 'curso',
     },
@@ -126,19 +197,12 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
       icon: CreditCard,
       page: 'meus-dados',
     },
-    {
-      id: 'termos',
-      completed: !!expert.aceitou_termo_adesao_em && !!expert.aceitou_politica_uso_em,
-      label: 'Aceitar termos e políticas',
-      icon: FileCheck,
-      page: 'meus-dados',
-    },
   ];
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+        <LoadingSpinner message="Carregando dashboard..." />
       </div>
     );
   }
@@ -148,7 +212,7 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
       {/* Welcome Section */}
       <div>
         <h2 className="text-2xl font-bold text-text-primary">
-          Olá, {expert.nome.split(' ')[0]}!
+          Olá, <span className="text-primary-600">{expert.nome.split(' ')[0]}</span>!
         </h2>
         <p className="text-text-secondary mt-1">
           Bem-vindo ao Programa Experts CorpVox
@@ -156,67 +220,109 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
       </div>
 
       {/* Hero Box with Message */}
-      <div className="bg-primary-50 border border-primary-200 rounded-xl overflow-hidden relative">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Left Column - Message and Steps */}
-          <div className="p-8">
-            {/* Message */}
-            <div className="mb-8">
-              <h3 className="text-2xl font-bold text-text-primary mb-3">
-                Você já influencia muitas empresas.
-              </h3>
-              <h4 className="text-xl font-semibold text-primary-600 mb-4">
-                Agora é hora de receber uma renda extra por isso.
-              </h4>
-              <p className="text-text-secondary text-base">
-                Compartilhe a CorpVox com empresas que você conhece e receba benefícios por cada contratação.
-              </p>
-            </div>
+      <div className="bg-primary-50 border border-primary-200 rounded-xl overflow-visible relative">
+        {/* Toggle Button - Outside box at top right */}
+        <button
+          onClick={() => setIsHeroExpanded(!isHeroExpanded)}
+          className="absolute -top-3 -right-3 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-white border-2 border-primary-200 hover:bg-primary-50 hover:border-primary-300 transition-all shadow-md"
+          aria-label={isHeroExpanded ? "Minimizar" : "Expandir"}
+        >
+          {isHeroExpanded ? (
+            <Minus className="w-5 h-5 text-primary-600" />
+          ) : (
+            <Plus className="w-5 h-5 text-primary-600" />
+          )}
+        </button>
 
-            {/* Steps - How it works */}
-            <div>
-              <div className="space-y-4">
-                <div className="flex items-start space-x-3">
-                  <div className="w-10 h-10 bg-primary-600 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-white font-bold">1</span>
-                  </div>
-                  <div>
-                    <h5 className="font-semibold text-text-primary mb-1">Indique uma empresa</h5>
-                    <p className="text-sm text-text-secondary">Cadastre os dados da empresa que você deseja indicar</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-3">
-                  <div className="w-10 h-10 bg-primary-600 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-white font-bold">2</span>
-                  </div>
-                  <div>
-                    <h5 className="font-semibold text-text-primary mb-1">Aguarde o contato</h5>
-                    <p className="text-sm text-text-secondary">Nossa equipe entrará em contato com a empresa indicada</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-3">
-                  <div className="w-10 h-10 bg-primary-600 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-white font-bold">3</span>
-                  </div>
-                  <div>
-                    <h5 className="font-semibold text-text-primary mb-1">Receba seus benefícios</h5>
-                    <p className="text-sm text-text-secondary">Quando a empresa contratar, você recebe sua recompensa</p>
-                  </div>
-                </div>
+        <div className={`transition-all duration-300 ${isHeroExpanded ? 'p-8 md:px-12 md:py-8' : 'p-6 md:px-8 md:py-6'}`}>
+          {/* Top Section: Title + Image */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+            {/* Left: Title and Subtitle */}
+            <div className="text-center md:text-left">
+              {/* Badge */}
+              <div className="inline-flex items-center px-3 py-1.5 bg-primary-600 text-white text-sm font-medium rounded-full mb-4">
+                Receba benefícios por sua indicação
               </div>
+
+              <h3 className={`font-bold leading-tight transition-all duration-300 ${
+                isHeroExpanded
+                  ? 'text-2xl md:text-3xl mb-4'
+                  : 'text-lg md:text-xl mb-2'
+              }`}>
+                <span className="text-text-primary">Você já orienta muitas empresas.</span>
+                <br />
+                <span className="text-primary-600">Agora pode ser reconhecido por isso.</span>
+              </h3>
+
+              {isHeroExpanded && (
+                <p className="text-text-secondary text-base leading-relaxed max-w-xl mx-auto md:mx-0">
+                  Identifique empresas que ainda não possuem um canal seguro de denúncias, conforme a NR-01. Se a empresa contratar o CorpVox, <span className="font-semibold">você recebe um benefício pelo seu apontamento técnico.</span>
+                </p>
+              )}
+            </div>
+
+            {/* Right: Image */}
+            <div className={`flex justify-center md:justify-end relative transition-all duration-300 ${
+              isHeroExpanded ? 'mb-0' : '-mb-6 md:-mb-6'
+            }`}>
+              <img
+                src="/sst_cropped.png"
+                alt="Expert SST"
+                className={`object-contain object-bottom opacity-90 relative transition-all duration-300 ${
+                  isHeroExpanded
+                    ? 'max-h-64 md:max-h-96 md:-mt-20'
+                    : 'max-h-32 md:max-h-48 md:-mt-10'
+                }`}
+              />
             </div>
           </div>
 
-          {/* Right Column - SST Image */}
-          <div className="hidden md:flex items-end justify-end h-full">
-            <img
-              src="/sst_cropped.png"
-              alt="Expert SST"
-              className="object-contain object-bottom h-full"
-            />
+          {/* Divider line and Steps - Only show when expanded */}
+          {isHeroExpanded && (
+            <>
+              {/* Divider line */}
+              <div className="border-t border-gray-300 -mx-8 md:-mx-12 mt-0 mb-10"></div>
+
+              {/* Bottom Section: Steps - Horizontal with dividers */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-0 md:divide-x md:divide-primary-200">
+            {/* Step 1 */}
+            <div className="flex flex-col items-center md:items-start text-center md:text-left md:pr-6">
+              <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center mb-3">
+                <span className="text-white text-sm font-bold">1</span>
+              </div>
+              <h5 className="font-bold text-text-primary text-base mb-2">Faça a indicação técnica</h5>
+              <p className="text-text-secondary text-sm leading-relaxed">Quando aplicável, mencione o CorpVox em seus relatórios como uma opção técnica adequada para empresas sem canal seguro de denúncias.</p>
+            </div>
+
+            {/* Step 2 */}
+            <div className="flex flex-col items-center md:items-start text-center md:text-left md:px-6">
+              <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center mb-3">
+                <span className="text-white text-sm font-bold">2</span>
+              </div>
+              <h5 className="font-bold text-text-primary text-base mb-2">Registre a empresa aqui</h5>
+              <p className="text-text-secondary text-sm leading-relaxed">Cadastro simples e rápido na plataforma.</p>
+            </div>
+
+            {/* Step 3 */}
+            <div className="flex flex-col items-center md:items-start text-center md:text-left md:px-6">
+              <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center mb-3">
+                <span className="text-white text-sm font-bold">3</span>
+              </div>
+              <h5 className="font-bold text-text-primary text-base mb-2">O time CorpVox assume o contato</h5>
+              <p className="text-text-secondary text-sm leading-relaxed">Nossa equipe conduz todo o processo. Você não vende, não negocia e não participa da decisão.</p>
+            </div>
+
+            {/* Step 4 */}
+            <div className="flex flex-col items-center md:items-start text-center md:text-left md:pl-6">
+              <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center mb-3">
+                <span className="text-white text-sm font-bold">4</span>
+              </div>
+              <h5 className="font-bold text-text-primary text-base mb-2">Receba seus benefícios</h5>
+              <p className="text-text-secondary text-sm leading-relaxed">Se a empresa contratar o CorpVox, seu benefício é liberado. O valor pode variar de <span className="font-bold">R$ 400 a R$ 1.500</span>, de acordo com o plano contratado.</p>
+            </div>
           </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -277,7 +383,7 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
             </div>
             <div className="flex-1">
               <h3 className="text-base font-semibold text-orange-900 mb-2">
-                Complete seu cadastro para começar a indicar
+                Faltam poucos passos para você começar a indicar
               </h3>
               <p className="text-sm text-orange-800 mb-4">
                 Você precisa completar algumas etapas antes de poder fazer indicações:
@@ -289,7 +395,7 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
                     <button
                       key={task.id}
                       onClick={() => onNavigate(task.page)}
-                      className="w-full flex items-center justify-between p-3 bg-white rounded-lg hover:bg-orange-50 transition-colors"
+                      className="w-full flex items-center justify-between p-3 bg-white rounded-lg hover:bg-gray-50 transition-colors"
                     >
                       <div className="flex items-center space-x-3">
                         {task.completed ? (
@@ -313,54 +419,12 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
         </div>
       )}
 
-      {/* Financial Quick Info */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Próximo Pagamento */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <DollarSign className="w-6 h-6 text-gray-700" />
-              <p className="text-sm text-text-muted">
-                Próximo Pagamento
-              </p>
-            </div>
-            <p className="text-2xl font-bold text-text-primary">
-              {formatCurrency(stats.proximoPagamento)}
-            </p>
-          </div>
-        </div>
-
-        {/* Aguardando NF */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center space-x-3">
-              <FileText className="w-6 h-6 text-gray-700" />
-              <p className="text-sm text-text-muted">
-                Aguardando NF
-              </p>
-            </div>
-            <p className="text-2xl font-bold text-text-primary">
-              {stats.aguardandoNF}
-            </p>
-          </div>
-          {stats.aguardandoNF > 0 && (
-            <button
-              onClick={() => onNavigate('beneficios')}
-              className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center space-x-1"
-            >
-              <span>Ver benefícios</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      </div>
-
       {/* Recent Indications */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-text-primary">
-              Indicações Recentes
+              Indicações recentes
             </h3>
             <button
               onClick={() => onNavigate('indicacoes')}
@@ -375,17 +439,15 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
           {recentIndications.length === 0 ? (
             <div className="px-6 py-8 text-center">
               <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-text-muted mb-4">
-                Você ainda não fez nenhuma indicação
+              <p className="text-sm text-text-muted mb-4">
+                Você ainda não fez nenhuma indicação.
               </p>
-              {!needsSetup && (
-                <button
-                  onClick={() => onNavigate('indicacoes')}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-                >
-                  Fazer primeira indicação
-                </button>
-              )}
+              <button
+                onClick={() => onNavigate('indicacoes')}
+                className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm"
+              >
+                Fazer primeira indicação
+              </button>
             </div>
           ) : (
             recentIndications.map((indication) => (
@@ -413,60 +475,66 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
         </div>
       </div>
 
-      {/* Quick Actions */}
-      {!needsSetup && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-text-primary mb-4">
-            Ações Rápidas
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button
-              onClick={() => onNavigate('indicacoes')}
-              className="flex items-center space-x-3 p-4 bg-primary-50 hover:bg-primary-100 rounded-lg transition-colors"
-            >
-              <FileText className="w-6 h-6 text-primary-600" />
-              <div className="text-left">
-                <p className="text-sm font-medium text-primary-900">
-                  Nova Indicação
-                </p>
-                <p className="text-xs text-primary-700">
-                  Indicar nova empresa
-                </p>
-              </div>
-            </button>
-
+      {/* Recent Benefits */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-text-primary">
+              Meus benefícios
+            </h3>
             <button
               onClick={() => onNavigate('beneficios')}
-              className="flex items-center space-x-3 p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+              className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center space-x-1"
             >
-              <DollarSign className="w-6 h-6 text-green-600" />
-              <div className="text-left">
-                <p className="text-sm font-medium text-green-900">
-                  Meus Benefícios
-                </p>
-                <p className="text-xs text-green-700">
-                  Ver pagamentos
-                </p>
-              </div>
-            </button>
-
-            <button
-              onClick={() => onNavigate('como-indicar')}
-              className="flex items-center space-x-3 p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-            >
-              <BookOpen className="w-6 h-6 text-blue-600" />
-              <div className="text-left">
-                <p className="text-sm font-medium text-blue-900">
-                  Como Indicar
-                </p>
-                <p className="text-xs text-blue-700">
-                  Ver guia completo
-                </p>
-              </div>
+              <span>Ver todos</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
-      )}
+        <div className="divide-y divide-gray-200">
+          {recentBenefits.length === 0 ? (
+            <div className="px-6 py-8 text-center">
+              <DollarSign className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-sm text-text-muted">
+                Você ainda não possui benefícios registrados
+              </p>
+            </div>
+          ) : (
+            recentBenefits.map((benefit) => (
+              <div
+                key={benefit.id}
+                className="px-6 py-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                onClick={() => onNavigate('beneficios')}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="font-medium text-text-primary">
+                      {benefit.indication?.empresa_nome || 'Empresa não identificada'}
+                    </p>
+                    <p className="text-sm text-text-muted mt-1">
+                      {new Date(benefit.criado_em).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-green-600">
+                      {formatCurrency(benefit.valor_beneficio || 0)}
+                    </p>
+                    <p className="text-xs text-text-muted mt-1">
+                      {benefit.pagamento_realizado ? 'Pago' : benefit.nf_enviada ? 'NF Enviada' : 'Pendente'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Policy Modal */}
+      <PolicyModal
+        isOpen={showPolicyModal}
+        onAccept={handlePolicyAccept}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   FileText,
@@ -11,10 +11,11 @@ import {
   GraduationCap,
   ChevronRight,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
 import { ExpertUser } from '../../types/database.types';
-import { logoutExpert, formatCurrency } from '../../lib/supabase';
+import { logoutExpert, formatCurrency, supabase } from '../../lib/supabase';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -24,10 +25,13 @@ interface DashboardLayoutProps {
   onLogout: () => void;
   totalIndicacoes?: number;
   totalBeneficios?: number;
+  totalBeneficiosPagos?: number;
 }
 
-export default function DashboardLayout({ children, expert, currentPage, onNavigate, onLogout, totalIndicacoes = 0, totalBeneficios = 0 }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, expert, currentPage, onNavigate, onLogout, totalIndicacoes = 0, totalBeneficios = 0, totalBeneficiosPagos = 0 }: DashboardLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [hasPendingNF, setHasPendingNF] = useState(false);
+  const [pendingNFCount, setPendingNFCount] = useState(0);
 
   // Check if expert needs attention
   const needsAttention =
@@ -35,6 +39,30 @@ export default function DashboardLayout({ children, expert, currentPage, onNavig
     !expert.chave_pix_empresa ||
     !expert.aceitou_termo_adesao_em ||
     !expert.aceitou_politica_uso_em;
+
+  // Check for benefits awaiting NF
+  useEffect(() => {
+    const checkPendingNF = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('experts_benefits')
+          .select('id')
+          .eq('expert_id', expert.id)
+          .eq('status', 'liberado_para_nf')
+          .eq('nf_enviada', false);
+
+        if (error) throw error;
+
+        const count = data?.length || 0;
+        setHasPendingNF(count > 0);
+        setPendingNFCount(count);
+      } catch (error) {
+        console.error('Error checking pending NF:', error);
+      }
+    };
+
+    checkPendingNF();
+  }, [expert.id]);
 
   const menuItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Meu Painel', badge: needsAttention },
@@ -186,13 +214,41 @@ export default function DashboardLayout({ children, expert, currentPage, onNavig
                 </div>
                 <div className="h-10 w-px bg-gray-300"></div>
                 <div className="text-right">
-                  <p className="text-xs text-text-muted">Benefícios recebidos</p>
+                  <p className="text-xs text-text-muted">Total de Benefícios</p>
                   <p className="text-sm font-semibold text-primary-600">{formatCurrency(totalBeneficios)}</p>
+                </div>
+                <div className="h-10 w-px bg-gray-300"></div>
+                <div className="text-right">
+                  <p className="text-xs text-text-muted">Benefícios já pagos</p>
+                  <p className="text-sm font-semibold text-green-600">{formatCurrency(totalBeneficiosPagos)}</p>
                 </div>
               </div>
             </div>
           </div>
         </header>
+
+        {/* NF Alert Banner */}
+        {hasPendingNF && (
+          <div className="bg-yellow-50 border-b border-yellow-200">
+            <div className="px-4 sm:px-6 lg:px-8 py-3">
+              <button
+                onClick={() => onNavigate('beneficios')}
+                className="flex items-center space-x-3 w-full hover:opacity-80 transition-opacity"
+              >
+                <span className="text-2xl flex-shrink-0">🎉</span>
+                <div className="flex-1 text-left">
+                  <p className="text-sm font-medium text-yellow-900">
+                    Você tem {pendingNFCount} {pendingNFCount === 1 ? 'benefício liberado' : 'benefícios liberados'} para emissão de Nota Fiscal
+                  </p>
+                  <p className="text-xs text-yellow-700 mt-0.5">
+                    Clique aqui para acessar e enviar sua NF
+                  </p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-yellow-600 flex-shrink-0" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Page Content */}
         <main className="p-4 sm:p-6 lg:p-8">

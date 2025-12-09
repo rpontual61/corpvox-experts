@@ -103,6 +103,7 @@ function AuthenticatedApp({ expert, onLogout, onUpdate }: { expert: ExpertUser; 
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [totalIndicacoes, setTotalIndicacoes] = useState(0);
   const [totalBeneficios, setTotalBeneficios] = useState(0);
+  const [totalBeneficiosPagos, setTotalBeneficiosPagos] = useState(0);
 
   useEffect(() => {
     loadHeaderStats();
@@ -115,15 +116,22 @@ function AuthenticatedApp({ expert, onLogout, onUpdate }: { expert: ExpertUser; 
       .select('*')
       .eq('expert_id', expert.id);
 
-    // Load total benefits received (pagamento_realizado = true)
-    const { data: benefits } = await supabase
+    // Load all benefits
+    const { data: allBenefits } = await supabase
+      .from('experts_benefits')
+      .select('*')
+      .eq('expert_id', expert.id);
+
+    // Load paid benefits
+    const { data: paidBenefits } = await supabase
       .from('experts_benefits')
       .select('*')
       .eq('expert_id', expert.id)
       .eq('pagamento_realizado', true);
 
     setTotalIndicacoes(indications?.length || 0);
-    setTotalBeneficios(benefits?.reduce((sum, b) => sum + (b.valor_beneficio || 0), 0) || 0);
+    setTotalBeneficios(allBenefits?.reduce((sum, b) => sum + (b.valor_beneficio || 0), 0) || 0);
+    setTotalBeneficiosPagos(paidBenefits?.reduce((sum, b) => sum + (b.valor_beneficio || 0), 0) || 0);
   };
 
   const renderPage = () => {
@@ -155,6 +163,7 @@ function AuthenticatedApp({ expert, onLogout, onUpdate }: { expert: ExpertUser; 
       onLogout={onLogout}
       totalIndicacoes={totalIndicacoes}
       totalBeneficios={totalBeneficios}
+      totalBeneficiosPagos={totalBeneficiosPagos}
     >
       {renderPage()}
     </DashboardLayout>

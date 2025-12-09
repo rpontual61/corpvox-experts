@@ -179,10 +179,8 @@ export default function IndicationsPage({ expert, onNavigate, initialMode = 'lis
             >
               <option value="all">Todos os status</option>
               <option value="aguardando_validacao">Aguardando Validação</option>
-              <option value="em_contato">Em Contato</option>
-              <option value="em_analise">Em Análise</option>
-              <option value="contratou">Contratou</option>
-              <option value="beneficio_previsto">Benefício Previsto</option>
+              <option value="em_contato">CorpVox em contato</option>
+              <option value="contratou">Contratou!</option>
               <option value="liberado_envio_nf">Liberado Envio NF</option>
               <option value="nf_enviada">NF Enviada</option>
               <option value="pago">Pago</option>
@@ -341,12 +339,14 @@ function NewIndicationForm({ expert, onBack }: { expert: ExpertUser; onBack: () 
   const [formData, setFormData] = useState({
     empresa_nome: '',
     empresa_cnpj: '',
+    quantidade_funcionarios: '',
     contato_nome: '',
     contato_email: '',
     contato_whatsapp: '',
     tipo_indicacao: 'relatorio_tecnico' as 'relatorio_tecnico' | 'email' | 'whatsapp_conversa',
     observacoes: '',
   });
+  const [declaracaoAceita, setDeclaracaoAceita] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -369,12 +369,22 @@ function NewIndicationForm({ expert, onBack }: { expert: ExpertUser; onBack: () 
       newErrors.empresa_cnpj = 'CNPJ inválido';
     }
 
+    if (!formData.quantidade_funcionarios.trim()) {
+      newErrors.quantidade_funcionarios = 'Quantidade de funcionários é obrigatória';
+    } else if (parseInt(formData.quantidade_funcionarios) < 1) {
+      newErrors.quantidade_funcionarios = 'Quantidade deve ser maior que zero';
+    }
+
     if (!formData.contato_nome.trim()) {
       newErrors.contato_nome = 'Nome do contato é obrigatório';
     }
 
     if (!formData.contato_email && !formData.contato_whatsapp) {
       newErrors.contato = 'Informe pelo menos e-mail ou WhatsApp';
+    }
+
+    if (!declaracaoAceita) {
+      newErrors.declaracao = 'Você precisa aceitar a declaração para continuar';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -404,6 +414,7 @@ function NewIndicationForm({ expert, onBack }: { expert: ExpertUser; onBack: () 
           expert_id: expert.id,
           empresa_nome: formData.empresa_nome,
           empresa_cnpj: formData.empresa_cnpj.replace(/\D/g, ''),
+          quantidade_funcionarios: parseInt(formData.quantidade_funcionarios),
           contato_nome: formData.contato_nome,
           contato_email: formData.contato_email || null,
           contato_whatsapp: formData.contato_whatsapp || null,
@@ -497,6 +508,23 @@ function NewIndicationForm({ expert, onBack }: { expert: ExpertUser; onBack: () 
                 <p className="text-sm text-red-600 mt-1">{errors.empresa_cnpj}</p>
               )}
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-2">
+                Quantidade de Funcionários *
+              </label>
+              <input
+                type="number"
+                value={formData.quantidade_funcionarios}
+                onChange={(e) => setFormData({ ...formData, quantidade_funcionarios: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                placeholder="50"
+                min="1"
+              />
+              {errors.quantidade_funcionarios && (
+                <p className="text-sm text-red-600 mt-1">{errors.quantidade_funcionarios}</p>
+              )}
+            </div>
           </div>
         </div>
 
@@ -588,6 +616,28 @@ function NewIndicationForm({ expert, onBack }: { expert: ExpertUser; onBack: () 
           </div>
         </div>
 
+        {/* Declaração */}
+        <div className="pt-6 border-t border-gray-200">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <label className="flex items-start space-x-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={declaracaoAceita}
+                onChange={(e) => setDeclaracaoAceita(e.target.checked)}
+                className="mt-1 w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+              />
+              <span className="text-sm text-gray-700">
+                Declaro que realizei a indicação desta empresa e que ela está sob minha responsabilidade técnica.
+                Estou ciente de que, em caso de falsidade nas informações prestadas, posso ser excluído do programa
+                e não receberei o benefício correspondente a esta indicação.
+              </span>
+            </label>
+            {errors.declaracao && (
+              <p className="text-sm text-red-600 mt-2">{errors.declaracao}</p>
+            )}
+          </div>
+        </div>
+
         {/* Submit */}
         {errors.submit && (
           <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -606,8 +656,8 @@ function NewIndicationForm({ expert, onBack }: { expert: ExpertUser; onBack: () 
           </button>
           <button
             type="submit"
-            disabled={loading}
-            className="flex-1 px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
+            disabled={loading || !declaracaoAceita}
+            className="flex-1 px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? 'Criando...' : 'Criar Indicação'}
           </button>

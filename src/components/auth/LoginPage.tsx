@@ -10,17 +10,20 @@ export default function LoginPage({ onOTPSent }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [errorStatus, setErrorStatus] = useState<string>('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setErrorStatus('');
     setLoading(true);
 
     try {
-      const { success, error: otpError, code } = await createOTP(email);
+      const { success, error: otpError, code, status } = await createOTP(email);
 
       if (!success) {
         setError(otpError || 'Erro ao enviar código');
+        setErrorStatus(status || '');
         setLoading(false);
         return;
       }
@@ -29,6 +32,7 @@ export default function LoginPage({ onOTPSent }: LoginPageProps) {
       onOTPSent(email, code);
     } catch (err) {
       setError('Erro ao processar solicitação');
+      setErrorStatus('');
       setLoading(false);
     }
   };
@@ -72,8 +76,16 @@ export default function LoginPage({ onOTPSent }: LoginPageProps) {
             </div>
 
             {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-600">{error}</p>
+              <div className={`p-3 rounded-lg ${
+                errorStatus === 'pendente'
+                  ? 'bg-yellow-50 border border-yellow-200'
+                  : 'bg-red-50 border border-red-200'
+              }`}>
+                <p className={`text-sm ${
+                  errorStatus === 'pendente'
+                    ? 'text-yellow-700'
+                    : 'text-red-600'
+                }`}>{error}</p>
               </div>
             )}
 

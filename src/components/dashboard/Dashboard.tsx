@@ -37,6 +37,7 @@ interface Stats {
   emProcesso: number;
   contratadas: number;
   totalBeneficios: number;
+  beneficiosPagos: number;
   proximoPagamento: number;
   aguardandoNF: number;
 }
@@ -61,6 +62,7 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
     emProcesso: 0,
     contratadas: 0,
     totalBeneficios: 0,
+    beneficiosPagos: 0,
     proximoPagamento: 0,
     aguardandoNF: 0,
   });
@@ -111,6 +113,7 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
       const contratadas = indications?.filter(i => i.status === 'contratou').length || 0;
 
       const totalBeneficios = benefits?.reduce((sum, b) => sum + (b.valor_beneficio || 0), 0) || 0;
+      const beneficiosPagos = benefits?.filter(b => b.pagamento_realizado).reduce((sum, b) => sum + (b.valor_beneficio || 0), 0) || 0;
       const aguardandoNF = benefits?.filter(b => !b.nf_enviada && b.pode_enviar_nf_a_partir_de && new Date(b.pode_enviar_nf_a_partir_de) <= new Date()).length || 0;
 
       // Calculate next payment
@@ -126,6 +129,7 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
         emProcesso,
         contratadas,
         totalBeneficios,
+        beneficiosPagos,
         proximoPagamento,
         aguardandoNF,
       });
@@ -235,13 +239,16 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-center md:items-start justify-between">
         <div>
           <h2 className="text-2xl font-bold text-text-primary">
             Olá, <span className="text-primary-600">{expert.nome.split(' ')[0]}</span>!
           </h2>
           <p className="text-text-secondary mt-1">
-            Bem-vindo ao Programa Experts CorpVox
+            <span className="hidden md:inline">Boas vindas ao Programa Experts CorpVox</span>
+            <span className="md:hidden">
+              Boas vindas ao Programa<br />Experts CorpVox
+            </span>
           </p>
         </div>
         <button
@@ -280,7 +287,7 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
             {/* Left: Title and Subtitle */}
             <div className="text-center md:text-left">
               {/* Badge */}
-              <div className="inline-flex items-center px-3 py-1.5 bg-primary-600 text-white text-sm font-medium rounded-full mb-4">
+              <div className="inline-flex items-center px-3 py-1.5 bg-gray-700 text-white text-sm font-medium rounded-full mb-4">
                 Receba benefícios por sua indicação
               </div>
 
@@ -366,8 +373,8 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
         </div>
       </div>
 
-      {/* Stats Cards Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      {/* Stats Cards - Row 1: Benefícios */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           {/* Total Benefícios */}
           <div className="bg-gradient-to-br from-primary-600 to-primary-700 rounded-xl shadow-sm p-6 text-white">
             <div className="flex items-center justify-between">
@@ -377,12 +384,30 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
                   Total de Benefícios
                 </p>
               </div>
-              <p className="text-3xl font-bold">
+              <p className="text-xl md:text-3xl font-bold">
                 {formatCurrency(stats.totalBeneficios)}
               </p>
             </div>
           </div>
 
+          {/* Benefícios já pagos */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <CheckCircle2 className="w-6 h-6 text-gray-700" />
+                <p className="text-sm text-text-muted">
+                  Benefícios já pagos
+                </p>
+              </div>
+              <p className="text-xl md:text-2xl font-bold text-green-600">
+                {formatCurrency(stats.beneficiosPagos)}
+              </p>
+            </div>
+          </div>
+      </div>
+
+      {/* Stats Cards - Row 2: Indicações */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           {/* Total Indicações */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
@@ -392,7 +417,7 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
                   Total de Indicações
                 </p>
               </div>
-              <p className="text-2xl font-bold text-text-primary">
+              <p className="text-xl md:text-2xl font-bold text-text-primary">
                 {stats.totalIndicacoes}
               </p>
             </div>
@@ -407,7 +432,7 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
                   Empresas Contratantes
                 </p>
               </div>
-              <p className="text-2xl font-bold text-text-primary">
+              <p className="text-xl md:text-2xl font-bold text-text-primary">
                 {stats.contratadas}
               </p>
             </div>
@@ -649,7 +674,7 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
                       {formatCurrency(benefit.valor_beneficio || 0)}
                     </p>
                     <p className="text-xs text-text-muted mt-1">
-                      {benefit.pagamento_realizado ? 'Pago' : benefit.nf_enviada ? 'NF Enviada' : 'Pendente'}
+                      {benefit.status === 'pago' ? 'Pago' : benefit.status === 'nf_enviada' ? 'Processando pagamento' : benefit.status === 'liberado_para_nf' ? 'Emita sua nota fiscal' : 'Aguardando pagamento cliente'}
                     </p>
                   </div>
                 </div>

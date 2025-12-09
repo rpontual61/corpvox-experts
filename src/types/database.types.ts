@@ -9,11 +9,108 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      experts_admin_users: {
+        Row: {
+          id: string
+          username: string
+          password_hash: string
+          nome: string
+          email: string
+          ativo: boolean
+          ultimo_acesso: string | null
+          criado_em: string
+          atualizado_em: string
+        }
+        Insert: {
+          id?: string
+          username: string
+          password_hash: string
+          nome: string
+          email: string
+          ativo?: boolean
+          ultimo_acesso?: string | null
+          criado_em?: string
+          atualizado_em?: string
+        }
+        Update: {
+          id?: string
+          username?: string
+          password_hash?: string
+          nome?: string
+          email?: string
+          ativo?: boolean
+          ultimo_acesso?: string | null
+          criado_em?: string
+          atualizado_em?: string
+        }
+      }
+      experts_admin_sessions: {
+        Row: {
+          id: string
+          admin_id: string
+          token: string
+          valido_ate: string
+          ip_address: string | null
+          user_agent: string | null
+          criado_em: string
+        }
+        Insert: {
+          id?: string
+          admin_id: string
+          token: string
+          valido_ate: string
+          ip_address?: string | null
+          user_agent?: string | null
+          criado_em?: string
+        }
+        Update: {
+          id?: string
+          admin_id?: string
+          token?: string
+          valido_ate?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          criado_em?: string
+        }
+      }
+      experts_admin_activity_log: {
+        Row: {
+          id: string
+          admin_id: string | null
+          acao: string
+          entidade_tipo: string | null
+          entidade_id: string | null
+          detalhes: any | null
+          ip_address: string | null
+          criado_em: string
+        }
+        Insert: {
+          id?: string
+          admin_id?: string | null
+          acao: string
+          entidade_tipo?: string | null
+          entidade_id?: string | null
+          detalhes?: any | null
+          ip_address?: string | null
+          criado_em?: string
+        }
+        Update: {
+          id?: string
+          admin_id?: string | null
+          acao?: string
+          entidade_tipo?: string | null
+          entidade_id?: string | null
+          detalhes?: any | null
+          ip_address?: string | null
+          criado_em?: string
+        }
+      }
       experts_users: {
         Row: {
           id: string
           email: string
           nome: string
+          cpf: string | null
           telefone_whatsapp: string | null
           tipo_perfil: 'sst' | 'business' | null
           empresa_nome: string | null
@@ -24,7 +121,7 @@ export interface Database {
           detalhes_vinculo_clt: string | null
           curso_concluido: boolean
           curso_concluido_em: string | null
-          status: 'pendente' | 'aprovado' | 'reprovado' | 'suspenso'
+          status: 'pendente' | 'aprovado' | 'reprovado'
           motivo_status: string | null
           chave_pix_empresa: string | null
           tipo_chave_pix: 'cpf' | 'cnpj' | 'email' | 'telefone' | 'chave_aleatoria' | null
@@ -40,6 +137,7 @@ export interface Database {
           id?: string
           email: string
           nome: string
+          cpf?: string | null
           telefone_whatsapp?: string | null
           tipo_perfil?: 'sst' | 'business' | null
           empresa_nome?: string | null
@@ -50,7 +148,7 @@ export interface Database {
           detalhes_vinculo_clt?: string | null
           curso_concluido?: boolean
           curso_concluido_em?: string | null
-          status?: 'pendente' | 'aprovado' | 'reprovado' | 'suspenso'
+          status?: 'pendente' | 'aprovado' | 'reprovado'
           motivo_status?: string | null
           chave_pix_empresa?: string | null
           tipo_chave_pix?: 'cpf' | 'cnpj' | 'email' | 'telefone' | 'chave_aleatoria' | null
@@ -66,6 +164,7 @@ export interface Database {
           id?: string
           email?: string
           nome?: string
+          cpf?: string | null
           telefone_whatsapp?: string | null
           tipo_perfil?: 'sst' | 'business' | null
           empresa_nome?: string | null
@@ -76,7 +175,7 @@ export interface Database {
           detalhes_vinculo_clt?: string | null
           curso_concluido?: boolean
           curso_concluido_em?: string | null
-          status?: 'pendente' | 'aprovado' | 'reprovado' | 'suspenso'
+          status?: 'pendente' | 'aprovado' | 'reprovado'
           motivo_status?: string | null
           chave_pix_empresa?: string | null
           tipo_chave_pix?: 'cpf' | 'cnpj' | 'email' | 'telefone' | 'chave_aleatoria' | null
@@ -129,7 +228,9 @@ export interface Database {
           contato_whatsapp: string | null
           tipo_indicacao: 'relatorio_tecnico' | 'email' | 'whatsapp_conversa' | null
           observacoes: string | null
-          status: 'aguardando_validacao' | 'validacao_recusada' | 'em_contato' | 'em_analise' | 'contratou' | 'beneficio_previsto' | 'liberado_envio_nf' | 'nf_enviada' | 'pago'
+          quantidade_funcionarios: number | null
+          status: 'aguardando_validacao' | 'validacao_recusada' | 'em_contato' | 'contratou' | 'perdido'
+          crm_status: 'contato_inicial' | 'apresentacao_marcada' | 'apresentacao_feita' | 'proposta_enviada' | 'em_avaliacao' | 'negociacao' | 'contrato_enviado' | 'contrato_assinado' | 'perdido' | null
           motivo_recusa: string | null
           validada_em: string | null
           validada_por: string | null
@@ -149,7 +250,9 @@ export interface Database {
           contato_whatsapp?: string | null
           tipo_indicacao?: 'relatorio_tecnico' | 'email' | 'whatsapp_conversa' | null
           observacoes?: string | null
-          status?: 'aguardando_validacao' | 'validacao_recusada' | 'em_contato' | 'em_analise' | 'contratou' | 'beneficio_previsto' | 'liberado_envio_nf' | 'nf_enviada' | 'pago'
+          quantidade_funcionarios?: number | null
+          status?: 'aguardando_validacao' | 'validacao_recusada' | 'em_contato' | 'contratou' | 'perdido'
+          crm_status?: 'contato_inicial' | 'apresentacao_marcada' | 'apresentacao_feita' | 'proposta_enviada' | 'em_avaliacao' | 'negociacao' | 'contrato_enviado' | 'contrato_assinado' | 'perdido' | null
           motivo_recusa?: string | null
           validada_em?: string | null
           validada_por?: string | null
@@ -169,7 +272,9 @@ export interface Database {
           contato_whatsapp?: string | null
           tipo_indicacao?: 'relatorio_tecnico' | 'email' | 'whatsapp_conversa' | null
           observacoes?: string | null
-          status?: 'aguardando_validacao' | 'validacao_recusada' | 'em_contato' | 'em_analise' | 'contratou' | 'beneficio_previsto' | 'liberado_envio_nf' | 'nf_enviada' | 'pago'
+          quantidade_funcionarios?: number | null
+          status?: 'aguardando_validacao' | 'validacao_recusada' | 'em_contato' | 'contratou' | 'perdido'
+          crm_status?: 'contato_inicial' | 'apresentacao_marcada' | 'apresentacao_feita' | 'proposta_enviada' | 'em_avaliacao' | 'negociacao' | 'contrato_enviado' | 'contrato_assinado' | 'perdido' | null
           motivo_recusa?: string | null
           validada_em?: string | null
           validada_por?: string | null
@@ -192,6 +297,8 @@ export interface Database {
           data_primeiro_pagamento_cliente: string | null
           data_prevista_pagamento_beneficio: string | null
           pode_enviar_nf_a_partir_de: string | null
+          status: 'aguardando_pagamento_cliente' | 'liberado_para_nf' | 'nf_enviada' | 'pago'
+          cliente_pagou_em: string | null
           nf_enviada: boolean
           nf_data_emissao: string | null
           nf_valor: number | null
@@ -213,6 +320,8 @@ export interface Database {
           data_primeiro_pagamento_cliente?: string | null
           data_prevista_pagamento_beneficio?: string | null
           pode_enviar_nf_a_partir_de?: string | null
+          status?: 'aguardando_pagamento_cliente' | 'liberado_para_nf' | 'nf_enviada' | 'pago'
+          cliente_pagou_em?: string | null
           nf_enviada?: boolean
           nf_data_emissao?: string | null
           nf_valor?: number | null
@@ -234,6 +343,8 @@ export interface Database {
           data_primeiro_pagamento_cliente?: string | null
           data_prevista_pagamento_beneficio?: string | null
           pode_enviar_nf_a_partir_de?: string | null
+          status?: 'aguardando_pagamento_cliente' | 'liberado_para_nf' | 'nf_enviada' | 'pago'
+          cliente_pagou_em?: string | null
           nf_enviada?: boolean
           nf_data_emissao?: string | null
           nf_valor?: number | null
@@ -248,6 +359,18 @@ export interface Database {
     }
   }
 }
+
+export type AdminUser = Database['public']['Tables']['experts_admin_users']['Row']
+export type AdminUserInsert = Database['public']['Tables']['experts_admin_users']['Insert']
+export type AdminUserUpdate = Database['public']['Tables']['experts_admin_users']['Update']
+
+export type AdminSession = Database['public']['Tables']['experts_admin_sessions']['Row']
+export type AdminSessionInsert = Database['public']['Tables']['experts_admin_sessions']['Insert']
+export type AdminSessionUpdate = Database['public']['Tables']['experts_admin_sessions']['Update']
+
+export type AdminActivityLog = Database['public']['Tables']['experts_admin_activity_log']['Row']
+export type AdminActivityLogInsert = Database['public']['Tables']['experts_admin_activity_log']['Insert']
+export type AdminActivityLogUpdate = Database['public']['Tables']['experts_admin_activity_log']['Update']
 
 export type ExpertUser = Database['public']['Tables']['experts_users']['Row']
 export type ExpertUserInsert = Database['public']['Tables']['experts_users']['Insert']

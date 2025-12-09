@@ -40,14 +40,11 @@ export default function LoginPage({ onOTPSent }: LoginPageProps) {
         <div className="text-center mb-8">
           <div className="flex justify-center mb-6">
             <img
-              src="/Logo.svg"
-              alt="CorpVox"
+              src="/Corpvox_experts.png"
+              alt="CorpVox Experts"
               className="h-12 w-auto"
             />
           </div>
-          <h1 className="text-3xl font-bold text-primary-600 mb-2">
-            Programa Experts
-          </h1>
           <p className="text-text-secondary">
             Faça login para acessar sua área
           </p>
@@ -89,7 +86,7 @@ export default function LoginPage({ onOTPSent }: LoginPageProps) {
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  <span>Receber código</span>
+                  <span>Receber código de acesso</span>
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}
@@ -106,7 +103,7 @@ export default function LoginPage({ onOTPSent }: LoginPageProps) {
         {/* Footer */}
         <div className="mt-8 text-center">
           <p className="text-xs text-text-muted">
-            Não tem cadastro? Entre em contato com a equipe CorpVox
+            Não tem cadastro? <a href="#" className="text-primary-600 hover:text-primary-700 underline">Conheça o programa</a>
           </p>
         </div>
       </div>

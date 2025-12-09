@@ -7,12 +7,13 @@ import LoadingSpinner from '../LoadingSpinner';
 interface IndicationsPageProps {
   expert: ExpertUser;
   onNavigate?: (page: string) => void;
+  initialMode?: 'list' | 'new';
 }
 
 type ViewMode = 'list' | 'new';
 
-export default function IndicationsPage({ expert, onNavigate }: IndicationsPageProps) {
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+export default function IndicationsPage({ expert, onNavigate, initialMode = 'list' }: IndicationsPageProps) {
+  const [viewMode, setViewMode] = useState<ViewMode>(initialMode);
   const [indications, setIndications] = useState<ExpertIndication[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');

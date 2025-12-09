@@ -132,6 +132,8 @@ function AuthenticatedApp({ expert, onLogout, onUpdate }: { expert: ExpertUser; 
         return <Dashboard expert={expert} onNavigate={setCurrentPage} />;
       case 'indicacoes':
         return <IndicationsPage expert={expert} />;
+      case 'indicacoes:new':
+        return <IndicationsPage expert={expert} initialMode="new" />;
       case 'beneficios':
         return <BenefitsPage expert={expert} />;
       case 'curso':

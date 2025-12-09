@@ -107,7 +107,7 @@ export default function DashboardLayout({ children, expert, currentPage, onNavig
             <ul className="space-y-1">
               {menuItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = currentPage === item.id;
+                const isActive = currentPage === item.id || currentPage.startsWith(item.id + ':');
 
                 return (
                   <li key={item.id}>

@@ -16,11 +16,14 @@ import {
   Headphones,
   Gift,
   Plus,
-  Minus
+  Minus,
+  LayoutGrid,
+  List
 } from 'lucide-react';
-import { ExpertUser, ExpertBenefit } from '../../types/database.types';
-import { supabase, formatCurrency, getIndicationStatusColor, getIndicationStatusDisplay } from '../../lib/supabase';
+import { ExpertUser, ExpertBenefit, ExpertIndication } from '../../types/database.types';
+import { supabase, formatCurrency, getIndicationStatusColor, getIndicationStatusDisplay, getIndicationTypeDisplay } from '../../lib/supabase';
 import { PolicyModal } from '../modals/PolicyModal';
+import { IndicationDetailModal } from '../modals/IndicationDetailModal';
 import LoadingSpinner from '../LoadingSpinner';
 
 interface DashboardProps {
@@ -66,6 +69,9 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
   const [loading, setLoading] = useState(true);
   const [showPolicyModal, setShowPolicyModal] = useState(false);
   const [isHeroExpanded, setIsHeroExpanded] = useState(true);
+  const [indicationsViewMode, setIndicationsViewMode] = useState<'grid' | 'list'>('grid');
+  const [selectedIndication, setSelectedIndication] = useState<ExpertIndication | null>(null);
+  const [showIndicationModal, setShowIndicationModal] = useState(false);
 
   // Check if user needs to accept policy
   useEffect(() => {
@@ -124,8 +130,8 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
         aguardandoNF,
       });
 
-      // Set recent indications
-      setRecentIndications((indications || []).slice(0, 5));
+      // Set recent indications (limit to 10)
+      setRecentIndications((indications || []).slice(0, 10));
 
       // Set recent benefits
       const benefitsData = (benefits || []).map(item => ({
@@ -177,6 +183,25 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
     }
   };
 
+  const handleIndicationClick = async (indicationId: string) => {
+    try {
+      // Load full indication details
+      const { data, error } = await supabase
+        .from('experts_indications')
+        .select('*')
+        .eq('id', indicationId)
+        .single();
+
+      if (error) throw error;
+
+      setSelectedIndication(data);
+      setShowIndicationModal(true);
+    } catch (error) {
+      console.error('Error loading indication details:', error);
+      alert('Erro ao carregar detalhes da indicação.');
+    }
+  };
+
   // Check if expert needs to complete setup
   const needsSetup =
     !expert.curso_concluido ||
@@ -210,13 +235,28 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
-      <div>
-        <h2 className="text-2xl font-bold text-text-primary">
-          Olá, <span className="text-primary-600">{expert.nome.split(' ')[0]}</span>!
-        </h2>
-        <p className="text-text-secondary mt-1">
-          Bem-vindo ao Programa Experts CorpVox
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-text-primary">
+            Olá, <span className="text-primary-600">{expert.nome.split(' ')[0]}</span>!
+          </h2>
+          <p className="text-text-secondary mt-1">
+            Bem-vindo ao Programa Experts CorpVox
+          </p>
+        </div>
+        <button
+          onClick={() => !needsSetup && onNavigate('indicacoes:new')}
+          disabled={needsSetup}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors font-medium ${
+            needsSetup
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-primary-600 text-white hover:bg-primary-700'
+          }`}
+          title={needsSetup ? 'Complete os passos necessários para criar indicações' : 'Criar nova indicação'}
+        >
+          <Plus className="w-5 h-5 hidden md:block" />
+          <span>Nova Indicação</span>
+        </button>
       </div>
 
       {/* Hero Box with Message */}
@@ -426,53 +466,142 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
             <h3 className="text-lg font-semibold text-text-primary">
               Indicações recentes
             </h3>
-            <button
-              onClick={() => onNavigate('indicacoes')}
-              className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center space-x-1"
-            >
-              <span>Ver todas</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-        <div className="divide-y divide-gray-200">
-          {recentIndications.length === 0 ? (
-            <div className="px-6 py-8 text-center">
-              <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-sm text-text-muted mb-4">
-                Você ainda não fez nenhuma indicação.
-              </p>
+            <div className="flex items-center space-x-3">
+              {/* View Mode Toggle */}
+              {recentIndications.length > 0 && (
+                <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setIndicationsViewMode('grid')}
+                    className={`p-1.5 rounded transition-colors ${
+                      indicationsViewMode === 'grid'
+                        ? 'bg-white text-primary-600 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                    title="Visualização em grade"
+                  >
+                    <LayoutGrid className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setIndicationsViewMode('list')}
+                    className={`p-1.5 rounded transition-colors ${
+                      indicationsViewMode === 'list'
+                        ? 'bg-white text-primary-600 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                    title="Visualização em lista"
+                  >
+                    <List className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
               <button
                 onClick={() => onNavigate('indicacoes')}
-                className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm"
+                className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center space-x-1"
               >
-                Fazer primeira indicação
+                <span>Ver todas</span>
+                <ArrowRight className="w-4 h-4" />
               </button>
             </div>
-          ) : (
-            recentIndications.map((indication) => (
-              <div
-                key={indication.id}
-                className="px-6 py-4 hover:bg-gray-50 transition-colors cursor-pointer"
-                onClick={() => onNavigate('indicacoes')}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="font-medium text-text-primary">
-                      {indication.empresa_nome}
-                    </p>
-                    <p className="text-sm text-text-muted mt-1">
-                      {new Date(indication.criado_em).toLocaleDateString('pt-BR')}
-                    </p>
-                  </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${getIndicationStatusColor(indication.status)}`}>
-                    {getIndicationStatusDisplay(indication.status)}
-                  </span>
-                </div>
-              </div>
-            ))
-          )}
+          </div>
         </div>
+
+        {recentIndications.length === 0 ? (
+          <div className="px-6 py-8 text-center">
+            <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-sm text-text-muted mb-4">
+              Você ainda não fez nenhuma indicação.
+            </p>
+            <button
+              onClick={() => onNavigate('indicacoes')}
+              className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm"
+            >
+              Fazer primeira indicação
+            </button>
+          </div>
+        ) : indicationsViewMode === 'grid' ? (
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {recentIndications.map((indication) => (
+                <div
+                  key={indication.id}
+                  className="bg-gray-50 rounded-lg border border-gray-200 p-4 hover:bg-gray-100 hover:border-primary-200 transition-all cursor-pointer"
+                  onClick={() => handleIndicationClick(indication.id)}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getIndicationStatusColor(indication.status)}`}>
+                      {getIndicationStatusDisplay(indication.status)}
+                    </span>
+                  </div>
+                  <h4 className="font-semibold text-text-primary mb-2 line-clamp-2">
+                    {indication.empresa_nome}
+                  </h4>
+                  <p className="text-xs text-text-muted">
+                    {new Date(indication.criado_em).toLocaleDateString('pt-BR')}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
+                    Empresa
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
+                    CNPJ
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
+                    Tipo
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
+                    Data
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
+                    Status
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {recentIndications.map((indication) => (
+                  <tr
+                    key={indication.id}
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => handleIndicationClick(indication.id)}
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <p className="text-sm font-medium text-text-primary">
+                        {indication.empresa_nome}
+                      </p>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <p className="text-sm text-text-muted">
+                        {indication.empresa_cnpj}
+                      </p>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <p className="text-sm text-text-muted">
+                        {getIndicationTypeDisplay(indication.tipo_indicacao)}
+                      </p>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <p className="text-sm text-text-muted">
+                        {new Date(indication.criado_em).toLocaleDateString('pt-BR')}
+                      </p>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getIndicationStatusColor(indication.status)}`}>
+                        {getIndicationStatusDisplay(indication.status)}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Recent Benefits */}
@@ -535,6 +664,23 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
         isOpen={showPolicyModal}
         onAccept={handlePolicyAccept}
       />
+
+      {/* Indication Detail Modal */}
+      {selectedIndication && (
+        <IndicationDetailModal
+          isOpen={showIndicationModal}
+          onClose={() => {
+            setShowIndicationModal(false);
+            setSelectedIndication(null);
+          }}
+          onUpdate={() => {
+            loadDashboardData();
+            setShowIndicationModal(false);
+            setSelectedIndication(null);
+          }}
+          indication={selectedIndication}
+        />
+      )}
     </div>
   );
 }

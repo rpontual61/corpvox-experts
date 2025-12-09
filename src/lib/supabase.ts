@@ -102,11 +102,16 @@ export const sendOTPEmail = async (email: string, code: string): Promise<boolean
 export const createOTP = async (email: string): Promise<{ success: boolean; error?: string; code?: string }> => {
   try {
     // Check if user exists
-    const { data: expert } = await supabase
+    const { data: expert, error: expertError } = await supabase
       .from('experts_users')
       .select('id')
       .eq('email', email)
       .single();
+
+    // If expert doesn't exist, return error
+    if (expertError || !expert) {
+      return { success: false, error: 'E-mail não cadastrado no programa' };
+    }
 
     const code = generateOTP();
     const validoAte = new Date();
@@ -116,7 +121,7 @@ export const createOTP = async (email: string): Promise<{ success: boolean; erro
     const { error } = await supabase
       .from('experts_otps')
       .insert({
-        expert_id: expert?.id || null,
+        expert_id: expert.id,
         email,
         codigo: code,
         valido_ate: validoAte.toISOString(),
@@ -306,6 +311,18 @@ export const validateCNPJ = (cnpj: string): boolean => {
   if (result !== parseInt(digits.charAt(1))) return false;
 
   return true;
+};
+
+/**
+ * Get indication type display name
+ */
+export const getIndicationTypeDisplay = (type: string | null): string => {
+  const typeMap: Record<string, string> = {
+    relatorio_tecnico: 'Relatório Técnico',
+    email: 'E-mail',
+    whatsapp_conversa: 'Conversa WhatsApp',
+  };
+  return type ? (typeMap[type] || type) : '-';
 };
 
 /**

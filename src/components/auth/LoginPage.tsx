@@ -3,7 +3,7 @@ import { Mail, ArrowRight } from 'lucide-react';
 import { createOTP } from '../../lib/supabase';
 
 interface LoginPageProps {
-  onOTPSent: (email: string) => void;
+  onOTPSent: (email: string, otpCode?: string) => void;
 }
 
 export default function LoginPage({ onOTPSent }: LoginPageProps) {
@@ -17,7 +17,7 @@ export default function LoginPage({ onOTPSent }: LoginPageProps) {
     setLoading(true);
 
     try {
-      const { success, error: otpError } = await createOTP(email);
+      const { success, error: otpError, code } = await createOTP(email);
 
       if (!success) {
         setError(otpError || 'Erro ao enviar código');
@@ -26,7 +26,7 @@ export default function LoginPage({ onOTPSent }: LoginPageProps) {
       }
 
       // Success - move to OTP verification
-      onOTPSent(email);
+      onOTPSent(email, code);
     } catch (err) {
       setError('Erro ao processar solicitação');
       setLoading(false);

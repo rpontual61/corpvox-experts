@@ -17,6 +17,7 @@ type AuthStep = 'login' | 'otp' | 'authenticated';
 function App() {
   const [authStep, setAuthStep] = useState<AuthStep>('login');
   const [email, setEmail] = useState('');
+  const [devOtpCode, setDevOtpCode] = useState<string>('');
   const [expert, setExpert] = useState<ExpertUser | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -42,8 +43,9 @@ function App() {
     checkAuth();
   }, []);
 
-  const handleOTPSent = (userEmail: string) => {
+  const handleOTPSent = (userEmail: string, otpCode?: string) => {
     setEmail(userEmail);
+    setDevOtpCode(otpCode || '');
     setAuthStep('otp');
   };
 
@@ -57,6 +59,7 @@ function App() {
 
   const handleBackToLogin = () => {
     setEmail('');
+    setDevOtpCode('');
     setAuthStep('login');
   };
 
@@ -84,6 +87,7 @@ function App() {
     return (
       <OTPVerification
         email={email}
+        devOtpCode={devOtpCode}
         onSuccess={handleOTPSuccess}
         onBack={handleBackToLogin}
       />

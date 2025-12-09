@@ -4,15 +4,17 @@ import { verifyOTP, createOTP } from '../../lib/supabase';
 
 interface OTPVerificationProps {
   email: string;
+  devOtpCode?: string;
   onSuccess: () => void;
   onBack: () => void;
 }
 
-export default function OTPVerification({ email, onSuccess, onBack }: OTPVerificationProps) {
+export default function OTPVerification({ email, devOtpCode, onSuccess, onBack }: OTPVerificationProps) {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [currentDevCode, setCurrentDevCode] = useState(devOtpCode || '');
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Cooldown timer for resend
@@ -100,12 +102,17 @@ export default function OTPVerification({ email, onSuccess, onBack }: OTPVerific
     setError('');
 
     try {
-      const { success, error: resendError } = await createOTP(email);
+      const { success, error: resendError, code } = await createOTP(email);
 
       if (!success) {
         setError(resendError || 'Erro ao reenviar código');
         setLoading(false);
         return;
+      }
+
+      // Update dev code if available
+      if (code) {
+        setCurrentDevCode(code);
       }
 
       setResendCooldown(60); // 60 seconds cooldown
@@ -147,6 +154,22 @@ export default function OTPVerification({ email, onSuccess, onBack }: OTPVerific
               <label className="block text-sm font-medium text-text-primary mb-3 text-center">
                 Código de 6 dígitos
               </label>
+
+              {/* Dev Mode: Show OTP code on mobile */}
+              {currentDevCode && (
+                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg md:hidden">
+                  <p className="text-xs text-yellow-800 text-center mb-1 font-medium">
+                    Modo Desenvolvimento
+                  </p>
+                  <p className="text-2xl font-bold text-yellow-900 text-center tracking-widest">
+                    {currentDevCode}
+                  </p>
+                  <p className="text-xs text-yellow-700 text-center mt-1">
+                    Cole ou digite este código acima
+                  </p>
+                </div>
+              )}
+
               <div className="flex gap-2 justify-center">
                 {otp.map((digit, index) => (
                   <input

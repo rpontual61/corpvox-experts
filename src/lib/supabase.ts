@@ -99,7 +99,7 @@ export const sendOTPEmail = async (email: string, code: string): Promise<boolean
 /**
  * Create and send OTP
  */
-export const createOTP = async (email: string): Promise<{ success: boolean; error?: string }> => {
+export const createOTP = async (email: string): Promise<{ success: boolean; error?: string; code?: string }> => {
   try {
     // Check if user exists
     const { data: expert } = await supabase
@@ -131,7 +131,9 @@ export const createOTP = async (email: string): Promise<{ success: boolean; erro
       return { success: false, error: 'Erro ao enviar e-mail' };
     }
 
-    return { success: true };
+    // Return code in development mode for mobile testing
+    const isDevelopment = import.meta.env.DEV;
+    return { success: true, code: isDevelopment ? code : undefined };
   } catch (error) {
     console.error('Error creating OTP:', error);
     return { success: false, error: 'Erro ao criar código OTP' };

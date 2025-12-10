@@ -164,12 +164,13 @@ serve(async (req) => {
     const { error: updateBenefitError } = await supabase
       .from('experts_benefits')
       .update({
-        status: 'nf_enviada',
+        status: 'aguardando_conferencia', // Mudou: agora vai para conferência
         nf_enviada: true,
         nf_arquivo_url: filePath,
         nf_enviada_em: dataEnvio,
         nf_data_emissao: dataEmissao,
         nf_valor: parseFloat(valorBeneficio),
+        nf_recusa_justificativa: null, // Limpa justificativa de recusa anterior
       })
       .eq('id', benefitId);
 

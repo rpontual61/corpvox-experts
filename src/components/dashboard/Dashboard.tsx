@@ -732,7 +732,7 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
                       {formatCurrency(benefit.valor_beneficio || 0)}
                     </p>
                     <p className="text-xs text-text-muted mt-1">
-                      {benefit.status === 'pago' ? 'Pago' : benefit.status === 'nf_enviada' ? 'Processando pagamento' : benefit.status === 'liberado_para_nf' ? 'Emita sua nota fiscal' : 'Aguardando pagamento cliente'}
+                      {benefit.status === 'pago' ? 'Pago' : benefit.status === 'processando_pagamento' ? 'Pagamento agendado' : benefit.status === 'aguardando_conferencia' ? 'Conferindo Nota Fiscal' : benefit.status === 'nf_enviada' ? 'Processando pagamento' : benefit.status === 'liberado_para_nf' ? 'Emita sua nota fiscal' : 'Aguardando pagamento cliente'}
                     </p>
                   </div>
                   {benefit.status === 'liberado_para_nf' && !benefit.nf_enviada && (

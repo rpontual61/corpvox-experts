@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { DollarSign, Upload, CheckCircle2, Clock, FileText, Calendar, AlertCircle } from 'lucide-react';
+import { DollarSign, Upload, CheckCircle2, Clock, FileText, Calendar, AlertCircle, ArrowRight } from 'lucide-react';
 import { ExpertUser, ExpertBenefit, ExpertIndication } from '../../types/database.types';
 import { supabase, formatCurrency, formatDate, uploadExpertNF } from '../../lib/supabase';
 import LoadingSpinner from '../LoadingSpinner';
@@ -21,6 +21,9 @@ export default function BenefitsPage({ expert }: BenefitsPageProps) {
     pago: 0,
     aguardando_pagamento_cliente: 0,
     liberado_para_nf: 0,
+    aguardando_conferencia: 0,
+    nf_recusada: 0,
+    processando_pagamento: 0,
     nf_enviada: 0,
     pago_count: 0,
   });
@@ -54,10 +57,13 @@ export default function BenefitsPage({ expert }: BenefitsPageProps) {
       const pago = benefitsData.filter(b => b.status === 'pago').reduce((sum, b) => sum + (b.valor_beneficio || 0), 0);
       const aguardando_pagamento_cliente = benefitsData.filter(b => b.status === 'aguardando_pagamento_cliente').reduce((sum, b) => sum + (b.valor_beneficio || 0), 0);
       const liberado_para_nf = benefitsData.filter(b => b.status === 'liberado_para_nf').reduce((sum, b) => sum + (b.valor_beneficio || 0), 0);
+      const aguardando_conferencia = benefitsData.filter(b => b.status === 'aguardando_conferencia').reduce((sum, b) => sum + (b.valor_beneficio || 0), 0);
+      const nf_recusada = benefitsData.filter(b => b.status === 'nf_recusada').reduce((sum, b) => sum + (b.valor_beneficio || 0), 0);
+      const processando_pagamento = benefitsData.filter(b => b.status === 'processando_pagamento').reduce((sum, b) => sum + (b.valor_beneficio || 0), 0);
       const nf_enviada = benefitsData.filter(b => b.status === 'nf_enviada').reduce((sum, b) => sum + (b.valor_beneficio || 0), 0);
       const pago_count = benefitsData.filter(b => b.status === 'pago').length;
 
-      setStats({ total, pago, aguardando_pagamento_cliente, liberado_para_nf, nf_enviada, pago_count });
+      setStats({ total, pago, aguardando_pagamento_cliente, liberado_para_nf, aguardando_conferencia, nf_recusada, processando_pagamento, nf_enviada, pago_count });
       setLoading(false);
     } catch (error) {
       console.error('Error loading benefits:', error);
@@ -117,31 +123,49 @@ export default function BenefitsPage({ expert }: BenefitsPageProps) {
       </div>
 
       {/* Stats Cards - Row 2: Status */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-          <p className="text-xs font-medium text-text-primary mb-3">
+          <p className="text-xs font-medium text-text-primary mb-2">
             Aguardando pagamento cliente
           </p>
-          <p className="text-xl font-bold text-text-primary">
+          <p className="text-lg font-bold text-text-primary">
             {formatCurrency(stats.aguardando_pagamento_cliente)}
           </p>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-          <p className="text-xs font-medium text-text-primary mb-3">
-            Aguardando emissão da sua nota fiscal
+          <p className="text-xs font-medium text-text-primary mb-2">
+            Liberado para emissão de Nota Fiscal
           </p>
-          <p className="text-xl font-bold text-text-primary">
+          <p className="text-lg font-bold text-text-primary">
             {formatCurrency(stats.liberado_para_nf)}
           </p>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-          <p className="text-xs font-medium text-text-primary mb-3">
-            Processando pagamento
+          <p className="text-xs font-medium text-text-primary mb-2">
+            Notas em conferência
           </p>
-          <p className="text-xl font-bold text-text-primary">
-            {formatCurrency(stats.nf_enviada)}
+          <p className="text-lg font-bold text-text-primary">
+            {formatCurrency(stats.aguardando_conferencia)}
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <p className="text-xs font-medium text-text-primary mb-2">
+            Notas recusadas
+          </p>
+          <p className="text-lg font-bold text-red-600">
+            {formatCurrency(stats.nf_recusada)}
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <p className="text-xs font-medium text-text-primary mb-2">
+            Pagamento agendado
+          </p>
+          <p className="text-lg font-bold text-text-primary">
+            {formatCurrency(stats.processando_pagamento)}
           </p>
         </div>
       </div>
@@ -215,6 +239,7 @@ function BenefitCard({
   const [showReplaceModal, setShowReplaceModal] = useState(false);
 
   const canSendNF = benefit.status === 'liberado_para_nf' && !benefit.nf_enviada;
+  const nfRejected = benefit.status === 'nf_recusada';
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, isReplacement: boolean = false) => {
     const file = e.target.files?.[0];
@@ -270,6 +295,14 @@ function BenefitCard({
             <span className="px-2.5 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
               Pago
             </span>
+          ) : benefit.status === 'processando_pagamento' ? (
+            <span className="px-2.5 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+              Pagamento agendado
+            </span>
+          ) : benefit.status === 'aguardando_conferencia' ? (
+            <span className="px-2.5 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium">
+              Conferindo Nota Fiscal
+            </span>
           ) : benefit.status === 'nf_enviada' ? (
             <span className="px-2.5 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
               Processando pagamento
@@ -304,19 +337,55 @@ function BenefitCard({
           <p className="text-sm text-text-muted">
             Você já pode emitir e enviar sua nota fiscal!
           </p>
+        ) : benefit.status === 'aguardando_conferencia' ? (
+          <p className="text-sm text-text-muted">
+            Nota fiscal em conferência. Aguarde a validação.
+          </p>
+        ) : benefit.status === 'processando_pagamento' ? (
+          <p className="text-sm text-text-muted">
+            Nota fiscal aprovada! Pagamento previsto: {formatDate(benefit.data_prevista_pagamento_beneficio)}
+          </p>
         ) : benefit.status === 'nf_enviada' ? (
           <p className="text-sm text-text-muted">
             Nota fiscal enviada. Pagamento previsto: {formatDate(benefit.data_prevista_pagamento_beneficio)}
           </p>
         ) : benefit.status === 'pago' ? (
           <p className="text-sm text-text-muted">
-            Benefício pago em: {formatDate(benefit.data_contrato_cliente)}
+            Benefício pago em: {formatDate(benefit.pagamento_data || benefit.data_contrato_cliente)}
           </p>
         ) : (
           <p className="text-sm text-text-muted">
             Contrato: {formatDate(benefit.data_contrato_cliente)}
           </p>
         )}
+        {/* Alerta de NF Recusada */}
+        {nfRejected && (
+          <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-start space-x-3">
+              <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-red-900 mb-1">
+                  Nota Fiscal Recusada
+                </p>
+                <p className="text-xs text-red-700 mb-2">
+                  <strong>Motivo:</strong> {benefit.nf_recusa_justificativa || 'Não informado'}
+                </p>
+                <p className="text-xs text-red-600">
+                  Por favor, corrija o problema e envie uma nova nota fiscal.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowNFModal(true)}
+              className="w-full mt-3 py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm"
+            >
+              Enviar Nova Nota Fiscal
+            </button>
+          </div>
+        )}
+
         {/* Enviar NF Button */}
         {canSendNF && (
           <button

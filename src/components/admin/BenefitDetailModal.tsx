@@ -20,6 +20,9 @@ export default function BenefitDetailModal({ benefit, admin, onClose, onUpdate }
   const [expertData, setExpertData] = useState<ExpertUser | null>(null);
   const [showClientPaidConfirm, setShowClientPaidConfirm] = useState(false);
   const [showMarkAsPaidConfirm, setShowMarkAsPaidConfirm] = useState(false);
+  const [showApproveNFConfirm, setShowApproveNFConfirm] = useState(false);
+  const [showRejectNFModal, setShowRejectNFModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
     title: '',
@@ -132,6 +135,105 @@ export default function BenefitDetailModal({ benefit, admin, onClose, onUpdate }
     }
   };
 
+  const handleApproveNF = async () => {
+    try {
+      const { error } = await supabase
+        .from('experts_benefits')
+        .update({
+          status: 'processando_pagamento',
+          atualizado_em: new Date().toISOString()
+        })
+        .eq('id', benefit.id);
+
+      if (error) throw error;
+
+      await logAdminActivity(
+        admin.id,
+        'approve_nf',
+        'benefit',
+        benefit.id,
+        { nf_arquivo_url: benefit.nf_arquivo_url }
+      );
+
+      setShowApproveNFConfirm(false);
+      setAlertConfig({
+        title: 'Sucesso!',
+        message: 'Nota fiscal aprovada! Status atualizado para Processando Pagamento.',
+        type: 'success'
+      });
+      setShowAlert(true);
+
+      setTimeout(() => {
+        onUpdate();
+        onClose();
+      }, 1500);
+    } catch (error) {
+      console.error('Error approving NF:', error);
+      setShowApproveNFConfirm(false);
+      setAlertConfig({
+        title: 'Erro',
+        message: 'Erro ao aprovar nota fiscal. Tente novamente.',
+        type: 'error'
+      });
+      setShowAlert(true);
+    }
+  };
+
+  const handleRejectNF = async () => {
+    if (!rejectReason.trim()) {
+      setAlertConfig({
+        title: 'Atenção',
+        message: 'Por favor, informe o motivo da recusa.',
+        type: 'warning'
+      });
+      setShowAlert(true);
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('experts_benefits')
+        .update({
+          status: 'nf_recusada',
+          nf_recusa_justificativa: rejectReason,
+          atualizado_em: new Date().toISOString()
+        })
+        .eq('id', benefit.id);
+
+      if (error) throw error;
+
+      await logAdminActivity(
+        admin.id,
+        'reject_nf',
+        'benefit',
+        benefit.id,
+        { reason: rejectReason, nf_arquivo_url: benefit.nf_arquivo_url }
+      );
+
+      setShowRejectNFModal(false);
+      setRejectReason('');
+      setAlertConfig({
+        title: 'NF Recusada',
+        message: 'A nota fiscal foi recusada. O expert poderá enviar uma nova.',
+        type: 'success'
+      });
+      setShowAlert(true);
+
+      setTimeout(() => {
+        onUpdate();
+        onClose();
+      }, 1500);
+    } catch (error) {
+      console.error('Error rejecting NF:', error);
+      setAlertConfig({
+        title: 'Erro',
+        message: 'Erro ao recusar nota fiscal. Tente novamente.',
+        type: 'error'
+      });
+      setShowAlert(true);
+    }
+  };
+
   const handleMarkAsPaid = async () => {
     try {
       const { error } = await supabase
@@ -190,7 +292,11 @@ export default function BenefitDetailModal({ benefit, admin, onClose, onUpdate }
         return 'bg-yellow-100 text-yellow-800';
       case 'liberado_para_nf':
         return 'bg-green-100 text-green-800';
-      case 'nf_enviada':
+      case 'aguardando_conferencia':
+        return 'bg-orange-100 text-orange-800';
+      case 'nf_recusada':
+        return 'bg-red-100 text-red-800';
+      case 'processando_pagamento':
         return 'bg-blue-100 text-blue-800';
       case 'pago':
         return 'bg-emerald-100 text-emerald-800';
@@ -205,8 +311,12 @@ export default function BenefitDetailModal({ benefit, admin, onClose, onUpdate }
         return 'Aguardando Cliente';
       case 'liberado_para_nf':
         return 'Liberado para NF';
-      case 'nf_enviada':
-        return 'NF Enviada';
+      case 'aguardando_conferencia':
+        return 'Conferir Nota';
+      case 'nf_recusada':
+        return 'NF Recusada';
+      case 'processando_pagamento':
+        return 'Pagamento agendado';
       case 'pago':
         return 'Pago';
       default:
@@ -392,8 +502,137 @@ export default function BenefitDetailModal({ benefit, admin, onClose, onUpdate }
               </div>
             )}
 
+            {/* NF Awaiting Confirmation Buttons */}
+            {benefit.status === 'aguardando_conferencia' && (
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-start space-x-3">
+                  <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-orange-900 mb-1">
+                      Nota Fiscal Aguardando Conferência
+                    </p>
+                    <p className="text-xs text-orange-700">
+                      Revise a nota fiscal enviada pelo expert. Você pode aprová-la ou recusá-la com uma justificativa.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Dados para Conferência */}
+                <div className="bg-white border border-orange-200 rounded-lg p-4 space-y-3">
+                  <h5 className="font-semibold text-gray-900 text-sm">Dados para Conferência</h5>
+
+                  {/* Descrição do Serviço */}
+                  <div>
+                    <p className="text-xs font-semibold text-gray-700 mb-2">Descrição do Serviço:</p>
+                    <p className="text-sm text-white bg-gray-800 rounded-lg p-3">
+                      Benefício técnico referente ao Programa Experts CorpVox, conforme regras internas do programa. Indicação técnica da empresa <strong>{benefit.empresa_nome || 'N/A'}.</strong>
+                    </p>
+                  </div>
+
+                  {/* Dados do Expert */}
+                  <div className="pt-3 border-t border-gray-200">
+                    <p className="text-xs font-semibold text-gray-700 mb-2">Dados do Expert:</p>
+                    {expertData ? (
+                      <div className="space-y-1.5 text-sm">
+                        <div>
+                          <span className="text-gray-600">Razão Social:</span>
+                          <span className="ml-2 font-medium text-gray-900">
+                            {expertData.empresa_nome || 'N/A'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">CNPJ:</span>
+                          <span className="ml-2 font-medium text-gray-900">
+                            {expertData.empresa_cnpj || 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-500">Carregando dados...</p>
+                    )}
+                  </div>
+
+                  {/* Dados da CorpVox */}
+                  <div className="pt-3 border-t border-gray-200">
+                    <p className="text-xs font-semibold text-gray-700 mb-2">Dados da CorpVox (Tomador do Serviço):</p>
+                    <div className="space-y-1 text-sm">
+                      <div>
+                        <span className="text-gray-600">Razão Social:</span>
+                        <span className="ml-2 font-medium text-gray-900">CORPVOX TECNOLOGIA DA INFORMAÇÃO LTDA</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">CNPJ:</span>
+                        <span className="ml-2 font-medium text-gray-900">62.970.282/0001-07</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Inscrição Municipal:</span>
+                        <span className="ml-2 font-medium text-gray-900">109550</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Endereço:</span>
+                        <span className="ml-2 font-medium text-gray-900">Av. Paulista, 1636, Conjunto 4, Pavimento 15</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Bairro:</span>
+                        <span className="ml-2 font-medium text-gray-900">Bela Vista</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Cidade:</span>
+                        <span className="ml-2 font-medium text-gray-900">São Paulo – SP</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">CEP:</span>
+                        <span className="ml-2 font-medium text-gray-900">01310-200</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Telefone:</span>
+                        <span className="ml-2 font-medium text-gray-900">(61) 992578817</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">E-mail:</span>
+                        <span className="ml-2 font-medium text-gray-900">contato@corpvox.com.br</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Botão Visualizar NF */}
+                {nfSignedUrl && (
+                  <a
+                    href={nfSignedUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-white border-2 border-orange-300 text-orange-700 rounded-lg hover:bg-orange-50 transition-colors"
+                  >
+                    <FileText className="w-5 h-5" />
+                    <span>Visualizar Nota Fiscal</span>
+                  </a>
+                )}
+
+                <div className="flex space-x-3">
+                  {/* Botão Recusar */}
+                  <button
+                    onClick={() => setShowRejectNFModal(true)}
+                    className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    <AlertCircle className="w-5 h-5" />
+                    <span>Recusar NF</span>
+                  </button>
+
+                  {/* Botão Aprovar */}
+                  <button
+                    onClick={() => setShowApproveNFConfirm(true)}
+                    className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    <CheckCircle className="w-5 h-5" />
+                    <span>Aprovar NF</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Mark as Paid Button */}
-            {benefit.status === 'nf_enviada' && (
+            {benefit.status === 'processando_pagamento' && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
                 <div className="flex items-start space-x-3">
                   <FileText className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
@@ -513,6 +752,57 @@ export default function BenefitDetailModal({ benefit, admin, onClose, onUpdate }
         confirmText="Confirmar Pagamento"
         cancelText="Cancelar"
       />
+
+      <ConfirmationModal
+        isOpen={showApproveNFConfirm}
+        onClose={() => setShowApproveNFConfirm(false)}
+        onConfirm={handleApproveNF}
+        title="Aprovar Nota Fiscal"
+        message="Confirma a aprovação desta nota fiscal? O status mudará para 'Processando Pagamento'."
+        type="success"
+        confirmText="Aprovar"
+        cancelText="Cancelar"
+      />
+
+      {/* Modal de Recusa de NF */}
+      {showRejectNFModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000] p-4">
+          <div className="bg-white rounded-xl max-w-md w-full">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Recusar Nota Fiscal</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-gray-600">
+                Informe o motivo da recusa. Esta mensagem será exibida para o expert.
+              </p>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Ex: CNPJ incorreto, valor divergente, data de emissão inválida..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 min-h-[100px]"
+                autoFocus
+              />
+            </div>
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowRejectNFModal(false);
+                  setRejectReason('');
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleRejectNF}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
+              >
+                Confirmar Recusa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <AlertModal
         isOpen={showAlert}

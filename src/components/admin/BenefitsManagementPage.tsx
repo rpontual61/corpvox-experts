@@ -95,7 +95,11 @@ export default function BenefitsManagementPage({ admin }: BenefitsManagementPage
         return 'bg-yellow-100 text-yellow-800';
       case 'liberado_para_nf':
         return 'bg-green-100 text-green-800';
-      case 'nf_enviada':
+      case 'aguardando_conferencia':
+        return 'bg-orange-100 text-orange-800';
+      case 'nf_recusada':
+        return 'bg-red-100 text-red-800';
+      case 'processando_pagamento':
         return 'bg-blue-100 text-blue-800';
       case 'pago':
         return 'bg-emerald-100 text-emerald-800';
@@ -110,8 +114,12 @@ export default function BenefitsManagementPage({ admin }: BenefitsManagementPage
         return 'Aguardando Cliente';
       case 'liberado_para_nf':
         return 'Liberado para NF';
-      case 'nf_enviada':
-        return 'NF Enviada';
+      case 'aguardando_conferencia':
+        return 'Conferir Nota';
+      case 'nf_recusada':
+        return 'NF Recusada';
+      case 'processando_pagamento':
+        return 'Pagamento agendado';
       case 'pago':
         return 'Pago';
       default:

@@ -190,33 +190,31 @@ export default function IndicationsPage({ expert, onNavigate, initialMode = 'lis
         </div>
       </div>
 
-      {/* Indications List */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        {filteredIndications.length === 0 ? (
-          <div className="px-6 py-8 text-center">
-            <Building2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-sm text-text-muted mb-4">
-              {searchTerm || statusFilter !== 'all'
-                ? 'Nenhuma indicação encontrada'
-                : 'Você ainda não fez nenhuma indicação.'}
-            </p>
-            {canIndicate && !searchTerm && statusFilter === 'all' && (
-              <button
-                onClick={() => setViewMode('new')}
-                className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm"
-              >
-                Fazer primeira indicação
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-200">
-            {filteredIndications.map((indication) => (
-              <IndicationCard key={indication.id} indication={indication} />
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Indications Grid */}
+      {filteredIndications.length === 0 ? (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 px-6 py-8 text-center">
+          <Building2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-sm text-text-muted mb-4">
+            {searchTerm || statusFilter !== 'all'
+              ? 'Nenhuma indicação encontrada'
+              : 'Você ainda não fez nenhuma indicação.'}
+          </p>
+          {canIndicate && !searchTerm && statusFilter === 'all' && (
+            <button
+              onClick={() => setViewMode('new')}
+              className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm"
+            >
+              Fazer primeira indicação
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredIndications.map((indication) => (
+            <IndicationCard key={indication.id} indication={indication} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -226,28 +224,21 @@ function IndicationCard({ indication }: { indication: ExpertIndication }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className="p-6 hover:bg-gray-50 transition-colors">
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
-          <div className="flex items-center space-x-3 mb-2">
-            <h3 className="text-lg font-semibold text-text-primary">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+      <div className="p-6">
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-lg font-semibold text-text-primary mb-2 truncate">
               {indication.empresa_nome}
             </h3>
-            <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getIndicationStatusColor(indication.status)}`}>
+            <p className="text-sm text-text-muted mb-3">
+              CNPJ: {formatCNPJ(indication.empresa_cnpj)}
+            </p>
+            <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${getIndicationStatusColor(indication.status)}`}>
               {getIndicationStatusDisplay(indication.status)}
             </span>
           </div>
-          <p className="text-sm text-text-muted">
-            CNPJ: {formatCNPJ(indication.empresa_cnpj)}
-          </p>
         </div>
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-        >
-          {isExpanded ? 'Ocultar' : 'Ver detalhes'}
-        </button>
-      </div>
 
       {isExpanded && (
         <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
@@ -330,6 +321,15 @@ function IndicationCard({ indication }: { indication: ExpertIndication }) {
           )}
         </div>
       )}
+
+      {/* Ver detalhes button at bottom */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full mt-4 py-2 text-sm text-primary-600 hover:text-primary-700 font-medium border-t border-gray-200 pt-4"
+      >
+        {isExpanded ? 'Ocultar detalhes' : 'Ver detalhes'}
+      </button>
+      </div>
     </div>
   );
 }

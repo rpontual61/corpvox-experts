@@ -170,32 +170,30 @@ export default function BenefitsPage({ expert }: BenefitsPageProps) {
         </div>
       </div>
 
-      {/* Benefits List */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        {benefits.filter(b => statusFilter === 'all' || b.status === statusFilter).length === 0 ? (
-          <div className="px-6 py-12 text-center">
-            <DollarSign className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-text-muted">
-              {statusFilter === 'all'
-                ? 'Você ainda não possui benefícios registrados'
-                : 'Nenhum benefício encontrado com esse status'}
-            </p>
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-200">
-            {benefits
-              .filter(b => statusFilter === 'all' || b.status === statusFilter)
-              .map((benefit) => (
-                <BenefitCard
-                  key={benefit.id}
-                  benefit={benefit}
-                  expert={expert}
-                  onUpdate={loadBenefits}
-                />
-              ))}
-          </div>
-        )}
-      </div>
+      {/* Benefits Grid */}
+      {benefits.filter(b => statusFilter === 'all' || b.status === statusFilter).length === 0 ? (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 px-6 py-12 text-center">
+          <DollarSign className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <p className="text-text-muted">
+            {statusFilter === 'all'
+              ? 'Você ainda não possui benefícios registrados'
+              : 'Nenhum benefício encontrado com esse status'}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {benefits
+            .filter(b => statusFilter === 'all' || b.status === statusFilter)
+            .map((benefit) => (
+              <BenefitCard
+                key={benefit.id}
+                benefit={benefit}
+                expert={expert}
+                onUpdate={loadBenefits}
+              />
+            ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -213,6 +211,7 @@ function BenefitCard({
   const [isExpanded, setIsExpanded] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  const [showNFModal, setShowNFModal] = useState(false);
 
   const canSendNF = benefit.status === 'liberado_para_nf' && !benefit.nf_enviada;
 
@@ -227,9 +226,9 @@ function BenefitCard({
       return;
     }
 
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+    const allowedTypes = ['application/pdf', 'text/xml', 'application/xml'];
     if (!allowedTypes.includes(file.type)) {
-      setUploadError('Formato inválido. Use PDF, JPG ou PNG.');
+      setUploadError('Formato inválido. Use PDF ou XML.');
       return;
     }
 
@@ -270,10 +269,10 @@ function BenefitCard({
   };
 
   return (
-    <div className="p-6">
-      <div className="mb-3">
-        <div className="flex items-center space-x-3 mb-2">
-          <h3 className="text-lg font-semibold text-text-primary">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+      <div className="p-6">
+        <div className="mb-3">
+          <h3 className="text-lg font-semibold text-text-primary mb-2 truncate">
             {benefit.indication?.empresa_nome || 'Empresa'}
           </h3>
           {benefit.status === 'pago' ? (
@@ -327,131 +326,262 @@ function BenefitCard({
             Contrato: {formatDate(benefit.data_contrato_cliente)}
           </p>
         )}
+        {/* Enviar NF Button */}
+        {canSendNF && (
+          <button
+            onClick={() => setShowNFModal(true)}
+            className="w-full mt-4 py-3 px-4 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm flex items-center justify-center space-x-2"
+          >
+            <span>🎉</span>
+            <span>Enviar Nota Fiscal</span>
+          </button>
+        )}
+
+        {/* Expanded Details */}
+        {isExpanded && (
+          <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
+            <div className="space-y-3">
+              <div className="flex items-start space-x-3">
+                <Calendar className="w-5 h-5 text-text-muted flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs text-text-muted">Data do Contrato</p>
+                  <p className="text-sm text-text-primary font-medium">
+                    {formatDate(benefit.data_contrato_cliente)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <Calendar className="w-5 h-5 text-text-muted flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs text-text-muted">Previsão de liberação para envio de NF a partir de</p>
+                  <p className="text-sm text-text-primary font-medium">
+                    {formatDate(benefit.pode_enviar_nf_a_partir_de)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <Calendar className="w-5 h-5 text-text-muted flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs text-text-muted">Pagamento Previsto</p>
+                  <p className="text-sm text-text-primary font-medium">
+                    {formatDate(benefit.data_prevista_pagamento_beneficio)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {benefit.nf_enviada && (
+              <div className="pt-3 border-t border-gray-200">
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <FileText className="w-4 h-4 text-blue-600" />
+                    <p className="text-sm font-medium text-blue-900">
+                      Nota Fiscal Enviada
+                    </p>
+                  </div>
+                  <p className="text-xs text-blue-700">
+                    Enviada em: {formatDate(benefit.nf_enviada_em)}
+                  </p>
+                  <p className="text-xs text-blue-700">
+                    Valor: {formatCurrency(benefit.nf_valor || 0)}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {benefit.pagamento_realizado && (
+              <div className="pt-3 border-t border-gray-200">
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-600" />
+                    <p className="text-sm font-medium text-green-900">
+                      Pagamento Realizado
+                    </p>
+                  </div>
+                  <p className="text-xs text-green-700">
+                    Data: {formatDate(benefit.pagamento_data)}
+                  </p>
+                  <p className="text-xs text-green-700">
+                    Valor: {formatCurrency(benefit.valor_beneficio || 0)}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Ver detalhes button at bottom */}
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="w-full mt-4 py-2 text-sm text-primary-600 hover:text-primary-700 font-medium border-t border-gray-200 pt-4"
+        >
+          {isExpanded ? 'Ocultar detalhes' : 'Ver detalhes'}
+        </button>
       </div>
 
-      {/* Upload NF Section */}
-      {canSendNF && (
-        <div className="mt-4 p-6 bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-300 rounded-lg">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <AlertCircle className="w-6 h-6 text-white" />
+      {/* NF Upload Modal */}
+      {showNFModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-xl">
+              <h3 className="text-xl font-semibold text-text-primary">
+                Enviar Nota Fiscal
+              </h3>
+              <button
+                onClick={() => setShowNFModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
-            <div className="flex-1">
-              <p className="text-base font-semibold text-amber-900">
-                Você já pode enviar a nota fiscal
-              </p>
-              <p className="text-sm text-amber-700">
-                Envie sua NF no valor de {formatCurrency(benefit.valor_beneficio || 0)} para receber o pagamento no dia {formatDate(benefit.data_prevista_pagamento_beneficio)}.
-              </p>
+
+            {/* Modal Body */}
+            <div className="px-6 py-6 space-y-6">
+              {/* Valor e Data Limite */}
+              <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
+                <h4 className="font-semibold text-primary-900 mb-3">Informações do Benefício</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-primary-700">Valor da Nota Fiscal:</span>
+                    <span className="text-base font-semibold text-primary-900">
+                      {formatCurrency(benefit.valor_beneficio || 0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-primary-700">Data Limite para Emissão:</span>
+                    <span className="text-base font-semibold text-primary-900">
+                      {(() => {
+                        const date = new Date(benefit.pode_enviar_nf_a_partir_de);
+                        const year = date.getFullYear();
+                        const month = date.getMonth();
+                        return formatDate(new Date(year, month, 10).toISOString().split('T')[0]);
+                      })()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-primary-700">Previsão de Pagamento:</span>
+                    <span className="text-base font-semibold text-primary-900">
+                      {formatDate(benefit.data_prevista_pagamento_beneficio)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Descrição do Serviço */}
+              <div>
+                <h4 className="font-semibold text-text-primary mb-2">Descrição do Serviço</h4>
+                <p className="text-sm text-text-secondary bg-gray-50 border border-gray-200 rounded-lg p-3">
+                  Benefício técnico referente ao Programa Experts CorpVox, conforme regras internas do programa.
+                </p>
+              </div>
+
+              {/* Dados da CorpVox */}
+              <div>
+                <h4 className="font-semibold text-text-primary mb-3">Dados da CorpVox para Emissão da NF</h4>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-2 text-sm">
+                  <div className="grid grid-cols-1 gap-2">
+                    <div>
+                      <span className="font-medium text-text-primary">Razão Social:</span>
+                      <span className="ml-2 text-text-secondary">CORPVOX TECNOLOGIA DA INFORMAÇÃO LTDA</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-text-primary">CNPJ:</span>
+                      <span className="ml-2 text-text-secondary">62.970.282/0001-07</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-text-primary">Inscrição Municipal:</span>
+                      <span className="ml-2 text-text-secondary">109550</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-text-primary">Endereço:</span>
+                      <span className="ml-2 text-text-secondary">Av. Paulista, 1636, Conjunto 4, Pavimento 15</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-text-primary">Bairro:</span>
+                      <span className="ml-2 text-text-secondary">Bela Vista</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-text-primary">Cidade:</span>
+                      <span className="ml-2 text-text-secondary">São Paulo – SP</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-text-primary">CEP:</span>
+                      <span className="ml-2 text-text-secondary">01310-200</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-text-primary">Telefone:</span>
+                      <span className="ml-2 text-text-secondary">(61) 992578817</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-text-primary">E-mail:</span>
+                      <span className="ml-2 text-text-secondary">contato@corpvox.com.br</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Alert sobre Informações Exatas */}
+              <div className="bg-amber-50 border-l-4 border-amber-500 p-4">
+                <div className="flex items-start">
+                  <svg className="w-5 h-5 text-amber-500 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  <div>
+                    <h5 className="font-semibold text-amber-900 mb-1">Atenção - Informações Obrigatórias</h5>
+                    <p className="text-sm text-amber-800">
+                      A Nota Fiscal somente será considerada válida se emitida EXATAMENTE com as informações acima: descrição do serviço e todos os dados da CorpVox.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Upload Section */}
+              <div>
+                <h4 className="font-semibold text-text-primary mb-3">Enviar Nota Fiscal</h4>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <input
+                    type="file"
+                    id={`nf-upload-${benefit.id}`}
+                    accept=".pdf,.xml"
+                    onChange={handleFileUpload}
+                    disabled={uploading}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor={`nf-upload-${benefit.id}`}
+                    className="cursor-pointer inline-flex flex-col items-center"
+                  >
+                    <svg className="w-12 h-12 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <span className="text-sm font-medium text-text-primary">
+                      {uploading ? 'Enviando...' : 'Clique para selecionar o arquivo'}
+                    </span>
+                    <span className="text-xs text-text-muted mt-1">
+                      PDF ou XML (máx. 10MB)
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end space-x-3 rounded-b-xl">
+              <button
+                onClick={() => setShowNFModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
             </div>
           </div>
-          <label className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors cursor-pointer shadow-md">
-            {uploading ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span className="font-medium">Enviando...</span>
-              </>
-            ) : (
-              <>
-                <Upload className="w-5 h-5" />
-                <span className="font-medium">Enviar Nota Fiscal</span>
-              </>
-            )}
-            <input
-              type="file"
-              accept=".pdf,.jpg,.jpeg,.png"
-              onChange={handleFileUpload}
-              disabled={uploading}
-              className="hidden"
-            />
-          </label>
-          {uploadError && (
-            <p className="text-sm text-red-600 mt-2">{uploadError}</p>
-          )}
         </div>
       )}
-
-      {isExpanded && (
-        <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-start space-x-3">
-              <Calendar className="w-5 h-5 text-text-muted flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-xs text-text-muted">Data do Contrato</p>
-                <p className="text-sm text-text-primary font-medium">
-                  {formatDate(benefit.data_contrato_cliente)}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3">
-              <Calendar className="w-5 h-5 text-text-muted flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-xs text-text-muted">Previsão de liberação para envio de NF a partir de</p>
-                <p className="text-sm text-text-primary font-medium">
-                  {formatDate(benefit.pode_enviar_nf_a_partir_de)}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3">
-              <Calendar className="w-5 h-5 text-text-muted flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-xs text-text-muted">Pagamento Previsto</p>
-                <p className="text-sm text-text-primary font-medium">
-                  {formatDate(benefit.data_prevista_pagamento_beneficio)}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {benefit.nf_enviada && (
-            <div className="pt-3 border-t border-gray-200">
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-center space-x-2 mb-2">
-                  <FileText className="w-4 h-4 text-blue-600" />
-                  <p className="text-sm font-medium text-blue-900">
-                    Nota Fiscal Enviada
-                  </p>
-                </div>
-                <p className="text-xs text-blue-700">
-                  Enviada em: {formatDate(benefit.nf_enviada_em)}
-                </p>
-                <p className="text-xs text-blue-700">
-                  Valor: {formatCurrency(benefit.nf_valor || 0)}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {benefit.pagamento_realizado && (
-            <div className="pt-3 border-t border-gray-200">
-              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-center space-x-2 mb-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-600" />
-                  <p className="text-sm font-medium text-green-900">
-                    Pagamento Realizado
-                  </p>
-                </div>
-                <p className="text-xs text-green-700">
-                  Data: {formatDate(benefit.pagamento_data)}
-                </p>
-                <p className="text-xs text-green-700">
-                  Valor: {formatCurrency(benefit.valor_beneficio || 0)}
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Ver detalhes button at bottom */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full mt-4 py-2 text-sm text-primary-600 hover:text-primary-700 font-medium border-t border-gray-200 pt-4"
-      >
-        {isExpanded ? 'Ocultar detalhes' : 'Ver detalhes'}
-      </button>
     </div>
   );
 }

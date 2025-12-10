@@ -413,7 +413,7 @@ export const getIndicationStatusDisplay = (status: string): string => {
     validacao_recusada: 'Validação Recusada',
     em_contato: 'CorpVox em contato',
     contratou: 'Contratou!',
-    perdido: 'Perdido',
+    perdido: 'Não contratou',
     liberado_envio_nf: 'Liberado Envio NF',
     nf_enviada: 'NF Enviada',
     pago: 'Pago',

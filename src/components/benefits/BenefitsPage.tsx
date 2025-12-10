@@ -212,10 +212,11 @@ function BenefitCard({
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [showNFModal, setShowNFModal] = useState(false);
+  const [showReplaceModal, setShowReplaceModal] = useState(false);
 
   const canSendNF = benefit.status === 'liberado_para_nf' && !benefit.nf_enviada;
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, isReplacement: boolean = false) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -236,30 +237,20 @@ function BenefitCard({
     setUploadError('');
 
     try {
-      // Upload file
-      const filePath = await uploadExpertNF(expert.id, benefit.id, file);
+      // Upload via Edge Function (já atualiza o banco de dados também)
+      await uploadExpertNF(
+        expert.id,
+        benefit.id,
+        benefit.indication_id,
+        benefit.valor_beneficio,
+        file,
+        isReplacement
+      );
 
-      // Update benefit
-      const { error } = await supabase
-        .from('experts_benefits')
-        .update({
-          status: 'nf_enviada',
-          nf_enviada: true,
-          nf_arquivo_url: filePath,
-          nf_enviada_em: new Date().toISOString(),
-          nf_data_emissao: new Date().toISOString().split('T')[0],
-          nf_valor: benefit.valor_beneficio,
-        })
-        .eq('id', benefit.id);
-
-      if (error) throw error;
-
-      // Update indication status
-      await supabase
-        .from('experts_indications')
-        .update({ status: 'nf_enviada' })
-        .eq('id', benefit.indication_id);
-
+      // Fechar modais e mostrar sucesso
+      setShowNFModal(false);
+      setShowReplaceModal(false);
+      setUploading(false);
       onUpdate();
     } catch (error) {
       console.error('Error uploading NF:', error);
@@ -375,11 +366,22 @@ function BenefitCard({
             {benefit.nf_enviada && (
               <div className="pt-3 border-t border-gray-200">
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <FileText className="w-4 h-4 text-blue-600" />
-                    <p className="text-sm font-medium text-blue-900">
-                      Nota Fiscal Enviada
-                    </p>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-2">
+                      <FileText className="w-4 h-4 text-blue-600" />
+                      <p className="text-sm font-medium text-blue-900">
+                        Nota Fiscal Enviada
+                      </p>
+                    </div>
+                    {/* Botão Substituir NF - só aparece se ainda não foi pago */}
+                    {!benefit.pagamento_realizado && (
+                      <button
+                        onClick={() => setShowReplaceModal(true)}
+                        className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer transition-colors"
+                      >
+                        Substituir Nota
+                      </button>
+                    )}
                   </div>
                   <p className="text-xs text-blue-700">
                     Enviada em: {formatDate(benefit.nf_enviada_em)}
@@ -456,10 +458,10 @@ function BenefitCard({
                     <span className="text-sm text-primary-700">Data Limite para Emissão:</span>
                     <span className="text-base font-semibold text-primary-900">
                       {(() => {
-                        const date = new Date(benefit.pode_enviar_nf_a_partir_de);
-                        const year = date.getFullYear();
-                        const month = date.getMonth();
-                        return formatDate(new Date(year, month, 10).toISOString().split('T')[0]);
+                        // Extract year and month from the string to avoid timezone issues
+                        const dateStr = benefit.pode_enviar_nf_a_partir_de;
+                        const [year, month] = dateStr.split('-');
+                        return formatDate(`${year}-${month}-10`);
                       })()}
                     </span>
                   </div>
@@ -475,8 +477,8 @@ function BenefitCard({
               {/* Descrição do Serviço */}
               <div>
                 <h4 className="font-semibold text-text-primary mb-2">Descrição do Serviço</h4>
-                <p className="text-sm text-text-secondary bg-gray-50 border border-gray-200 rounded-lg p-3">
-                  Benefício técnico referente ao Programa Experts CorpVox, conforme regras internas do programa.
+                <p className="text-sm text-white bg-gray-800 rounded-lg p-3">
+                  Benefício técnico referente ao Programa Experts CorpVox, conforme regras internas do programa. Indicação técnica da empresa <strong>{benefit.indication?.empresa_nome || 'N/A'}.</strong>
                 </p>
               </div>
 
@@ -575,6 +577,98 @@ function BenefitCard({
               <button
                 onClick={() => setShowNFModal(false)}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Substituição de NF */}
+      {showReplaceModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full">
+            {/* Modal Header */}
+            <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-xl">
+              <h3 className="text-xl font-semibold text-text-primary">
+                Substituir Nota Fiscal
+              </h3>
+              <button
+                onClick={() => {
+                  setShowReplaceModal(false);
+                  setUploadError('');
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="px-6 py-6 space-y-4">
+              {/* Aviso */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-sm text-yellow-800">
+                  <strong>Atenção:</strong> O arquivo atual será substituído pelo novo. Esta ação não pode ser desfeita.
+                </p>
+              </div>
+
+              {/* Info do arquivo atual */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-xs text-blue-700 mb-1">
+                  <strong>Arquivo atual enviado em:</strong> {formatDate(benefit.nf_enviada_em)}
+                </p>
+                <p className="text-xs text-blue-700">
+                  <strong>Valor:</strong> {formatCurrency(benefit.nf_valor || 0)}
+                </p>
+              </div>
+
+              {/* Upload Section */}
+              <div>
+                <h4 className="font-semibold text-text-primary mb-3">Selecionar Novo Arquivo</h4>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-500 transition-colors">
+                  <input
+                    type="file"
+                    id={`nf-replace-upload-${benefit.id}`}
+                    accept=".pdf,.xml"
+                    onChange={(e) => handleFileUpload(e, true)}
+                    disabled={uploading}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor={`nf-replace-upload-${benefit.id}`}
+                    className="cursor-pointer inline-flex flex-col items-center"
+                  >
+                    <svg className="w-12 h-12 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <span className="text-sm font-medium text-text-primary">
+                      {uploading ? 'Substituindo...' : 'Clique para selecionar o arquivo'}
+                    </span>
+                    <span className="text-xs text-text-muted mt-1">
+                      PDF ou XML (máx. 10MB)
+                    </span>
+                  </label>
+                </div>
+
+                {uploadError && (
+                  <p className="mt-2 text-sm text-red-600">{uploadError}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end space-x-3 rounded-b-xl">
+              <button
+                onClick={() => {
+                  setShowReplaceModal(false);
+                  setUploadError('');
+                }}
+                disabled={uploading}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
               >
                 Cancelar
               </button>

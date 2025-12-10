@@ -240,25 +240,46 @@ export const getClientIP = async (): Promise<string> => {
 
 /**
  * Storage helpers for expert NF files
+ * Uses Edge Function to bypass RLS policies securely
  */
 export const uploadExpertNF = async (
   expertId: string,
   benefitId: string,
-  file: File
-): Promise<string> => {
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${benefitId}_${Date.now()}.${fileExt}`;
-  const filePath = `${expertId}/${fileName}`;
+  indicationId: string,
+  valorBeneficio: number,
+  file: File,
+  isReplacement: boolean = false
+): Promise<{ filePath: string; publicUrl: string }> => {
+  // Prepara o FormData para envio
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('expertId', expertId);
+  formData.append('benefitId', benefitId);
+  formData.append('indicationId', indicationId);
+  formData.append('valorBeneficio', valorBeneficio.toString());
+  formData.append('isReplacement', isReplacement.toString());
 
-  const { error } = await supabase.storage
-    .from('experts-nf')
-    .upload(filePath, file);
+  // Chama a Edge Function
+  const functionUrl = `${supabaseUrl}/functions/v1/upload-expert-nf`;
 
-  if (error) {
-    throw new Error(`Upload failed: ${error.message}`);
+  const response = await fetch(functionUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${supabaseKey}`,
+    },
+    body: formData,
+  });
+
+  const result = await response.json();
+
+  if (!result.success) {
+    throw new Error(result.error || 'Upload failed');
   }
 
-  return filePath;
+  return {
+    filePath: result.filePath,
+    publicUrl: result.publicUrl
+  };
 };
 
 /**

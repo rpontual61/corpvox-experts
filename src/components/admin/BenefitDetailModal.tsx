@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X as XIcon, DollarSign, Calendar, FileText, CheckCircle, AlertCircle, Building2, User } from 'lucide-react';
 import { supabase, formatDate, formatCurrency } from '../../lib/supabase';
-import { ExpertBenefit } from '../../types/database.types';
+import { ExpertBenefit, ExpertUser } from '../../types/database.types';
 import { AdminUser } from '../../types/database.types';
 import { logAdminActivity } from '../../lib/adminAuth';
 import ConfirmationModal from '../modals/ConfirmationModal';
@@ -16,6 +16,8 @@ interface BenefitDetailModalProps {
 }
 
 export default function BenefitDetailModal({ benefit, admin, onClose, onUpdate }: BenefitDetailModalProps) {
+  const [nfSignedUrl, setNfSignedUrl] = useState<string | null>(null);
+  const [expertData, setExpertData] = useState<ExpertUser | null>(null);
   const [showClientPaidConfirm, setShowClientPaidConfirm] = useState(false);
   const [showMarkAsPaidConfirm, setShowMarkAsPaidConfirm] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
@@ -25,6 +27,65 @@ export default function BenefitDetailModal({ benefit, admin, onClose, onUpdate }
     type: 'info' as 'success' | 'error' | 'warning' | 'info'
   });
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // Buscar dados do expert e gerar signed URL para NF
+  useEffect(() => {
+    const loadExpertData = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('experts_users')
+          .select('*')
+          .eq('id', benefit.expert_id)
+          .single();
+
+        if (error) throw error;
+        setExpertData(data);
+      } catch (error) {
+        console.error('Error loading expert data:', error);
+      }
+    };
+
+    const loadNFSignedUrl = async () => {
+      if (benefit.nf_arquivo_url) {
+        try {
+          console.log('Gerando signed URL para:', benefit.nf_arquivo_url);
+
+          // Chama Edge Function para gerar signed URL (usa service_role)
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+          const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+          const functionUrl = `${supabaseUrl}/functions/v1/get-expert-nf-url`;
+
+          const response = await fetch(functionUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${supabaseKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              filePath: benefit.nf_arquivo_url
+            }),
+          });
+
+          const result = await response.json();
+
+          if (!result.success) {
+            console.error('Erro ao gerar signed URL:', result.error);
+            throw new Error(result.error);
+          }
+
+          console.log('Signed URL gerada:', result.signedUrl);
+          setNfSignedUrl(result.signedUrl);
+        } catch (error) {
+          console.error('Error generating signed URL:', error);
+        }
+      } else {
+        console.log('benefit.nf_arquivo_url está vazio');
+      }
+    };
+
+    loadExpertData();
+    loadNFSignedUrl();
+  }, [benefit.expert_id, benefit.nf_arquivo_url]);
 
   const handleClientPaid = async () => {
     try {
@@ -263,14 +324,20 @@ export default function BenefitDetailModal({ benefit, admin, onClose, onUpdate }
                     </p>
                   </div>
                   {benefit.nf_arquivo_url && (
-                    <a
-                      href={benefit.nf_arquivo_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
-                    >
-                      Visualizar NF
-                    </a>
+                    nfSignedUrl ? (
+                      <a
+                        href={nfSignedUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+                      >
+                        Visualizar NF
+                      </a>
+                    ) : (
+                      <div className="px-4 py-2 bg-gray-300 text-gray-500 text-sm rounded-lg">
+                        Carregando...
+                      </div>
+                    )
                   )}
                 </div>
               </div>
@@ -339,6 +406,34 @@ export default function BenefitDetailModal({ benefit, admin, onClose, onUpdate }
                     </p>
                   </div>
                 </div>
+
+                {/* Dados do Expert para Pagamento */}
+                {expertData && (
+                  <div className="bg-white border border-blue-200 rounded-lg p-3 space-y-2">
+                    <p className="text-xs font-semibold text-gray-700 mb-2">Dados para Pagamento:</p>
+                    <div className="space-y-1.5">
+                      <div>
+                        <p className="text-xs text-gray-500">Empresa</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {expertData.empresa_nome || 'N/A'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">CNPJ</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {expertData.empresa_cnpj || 'N/A'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Chave PIX</p>
+                        <p className="text-sm font-medium text-gray-900 break-all">
+                          {expertData.chave_pix_empresa || 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     Data do Pagamento *

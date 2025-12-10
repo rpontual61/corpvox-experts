@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   TrendingUp,
   FileText,
@@ -18,10 +19,12 @@ import {
   Plus,
   Minus,
   LayoutGrid,
-  List
+  List,
+  Calendar,
+  Upload
 } from 'lucide-react';
 import { ExpertUser, ExpertBenefit, ExpertIndication } from '../../types/database.types';
-import { supabase, formatCurrency, getIndicationStatusColor, getIndicationStatusDisplay, getIndicationTypeDisplay } from '../../lib/supabase';
+import { supabase, formatCurrency, getIndicationStatusColor, getIndicationStatusDisplay, getIndicationTypeDisplay, uploadExpertNF } from '../../lib/supabase';
 import { PolicyModal } from '../modals/PolicyModal';
 import { IndicationDetailModal } from '../modals/IndicationDetailModal';
 import LoadingSpinner from '../LoadingSpinner';
@@ -74,6 +77,10 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
   const [indicationsViewMode, setIndicationsViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedIndication, setSelectedIndication] = useState<ExpertIndication | null>(null);
   const [showIndicationModal, setShowIndicationModal] = useState(false);
+  const [selectedBenefit, setSelectedBenefit] = useState<BenefitWithIndication | null>(null);
+  const [showNFModal, setShowNFModal] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
 
   // Check if user needs to accept policy
   useEffect(() => {
@@ -204,6 +211,55 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
       console.error('Error loading indication details:', error);
       alert('Erro ao carregar detalhes da indicação.');
     }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedBenefit) return;
+
+    // Validate file (mantém validações no frontend também)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      setUploadError('Arquivo muito grande. Máximo 10MB.');
+      return;
+    }
+
+    const allowedTypes = ['application/pdf', 'text/xml', 'application/xml'];
+    if (!allowedTypes.includes(file.type)) {
+      setUploadError('Formato inválido. Use PDF ou XML.');
+      return;
+    }
+
+    setUploading(true);
+    setUploadError('');
+
+    try {
+      // Upload via Edge Function (já atualiza o banco de dados também)
+      await uploadExpertNF(
+        expert.id,
+        selectedBenefit.id,
+        selectedBenefit.indication_id,
+        selectedBenefit.valor_beneficio,
+        file,
+        false // não é substituição (é primeiro envio)
+      );
+
+      // Fechando o modal e recarregando dados
+      setShowNFModal(false);
+      setSelectedBenefit(null);
+      await loadDashboardData();
+    } catch (error) {
+      console.error('Error uploading NF:', error);
+      setUploadError('Erro ao enviar nota fiscal. Tente novamente.');
+      setUploading(false);
+    }
+  };
+
+  const formatDate = (dateString: string | null | undefined): string => {
+    if (!dateString) return 'N/A';
+    // Parse date string directly to avoid timezone issues
+    const [year, month, day] = dateString.split('T')[0].split('-');
+    return `${day}/${month}/${year}`;
   };
 
   // Check if expert needs to complete setup
@@ -657,11 +713,13 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
             recentBenefits.map((benefit) => (
               <div
                 key={benefit.id}
-                className="px-6 py-4 hover:bg-gray-50 transition-colors cursor-pointer"
-                onClick={() => onNavigate('beneficios')}
+                className="px-6 py-4 hover:bg-gray-50 transition-colors"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
+                <div className="flex items-center justify-between gap-4">
+                  <div
+                    className="flex-1 cursor-pointer"
+                    onClick={() => onNavigate('beneficios')}
+                  >
                     <p className="font-medium text-text-primary">
                       {benefit.indication?.empresa_nome || 'Empresa não identificada'}
                     </p>
@@ -677,6 +735,19 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
                       {benefit.status === 'pago' ? 'Pago' : benefit.status === 'nf_enviada' ? 'Processando pagamento' : benefit.status === 'liberado_para_nf' ? 'Emita sua nota fiscal' : 'Aguardando pagamento cliente'}
                     </p>
                   </div>
+                  {benefit.status === 'liberado_para_nf' && !benefit.nf_enviada && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedBenefit(benefit);
+                        setShowNFModal(true);
+                      }}
+                      className="px-3 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-xs font-medium flex items-center space-x-1.5 whitespace-nowrap"
+                    >
+                      <span>🎉</span>
+                      <span>Enviar nota fiscal</span>
+                    </button>
+                  )}
                 </div>
               </div>
             ))
@@ -705,6 +776,178 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
           }}
           indication={selectedIndication}
         />
+      )}
+
+      {/* NF Upload Modal */}
+      {showNFModal && selectedBenefit && createPortal(
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-xl">
+              <h3 className="text-xl font-semibold text-text-primary">
+                Enviar Nota Fiscal
+              </h3>
+              <button
+                onClick={() => {
+                  setShowNFModal(false);
+                  setSelectedBenefit(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="px-6 py-6 space-y-6">
+              {/* Valor e Data Limite */}
+              <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
+                <h4 className="font-semibold text-primary-900 mb-3">Informações do Benefício</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-primary-700">Valor da Nota Fiscal:</span>
+                    <span className="text-base font-semibold text-primary-900">
+                      {formatCurrency(selectedBenefit.valor_beneficio || 0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-primary-700">Data Limite para Emissão:</span>
+                    <span className="text-base font-semibold text-primary-900">
+                      {(() => {
+                        // Extract year and month from the string to avoid timezone issues
+                        const dateStr = selectedBenefit.pode_enviar_nf_a_partir_de;
+                        const [year, month] = dateStr.split('-');
+                        return formatDate(`${year}-${month}-10`);
+                      })()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-primary-700">Previsão de Pagamento:</span>
+                    <span className="text-base font-semibold text-primary-900">
+                      {formatDate(selectedBenefit.data_prevista_pagamento_beneficio)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Descrição do Serviço */}
+              <div>
+                <h4 className="font-semibold text-text-primary mb-2">Descrição do Serviço</h4>
+                <p className="text-sm text-white bg-gray-800 rounded-lg p-3">
+                  Benefício técnico referente ao Programa Experts CorpVox, conforme regras internas do programa. Indicação técnica da empresa <strong>{selectedBenefit.indication?.empresa_nome || 'N/A'}.</strong>
+                </p>
+              </div>
+
+              {/* Dados da CorpVox */}
+              <div>
+                <h4 className="font-semibold text-text-primary mb-3">Dados da CorpVox para Emissão da NF</h4>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-2 text-sm">
+                  <div className="grid grid-cols-1 gap-2">
+                    <div>
+                      <span className="font-medium text-text-primary">Razão Social:</span>
+                      <span className="ml-2 text-text-secondary">CORPVOX TECNOLOGIA DA INFORMAÇÃO LTDA</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-text-primary">CNPJ:</span>
+                      <span className="ml-2 text-text-secondary">62.970.282/0001-07</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-text-primary">Inscrição Municipal:</span>
+                      <span className="ml-2 text-text-secondary">109550</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-text-primary">Endereço:</span>
+                      <span className="ml-2 text-text-secondary">Av. Paulista, 1636, Conjunto 4, Pavimento 15</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-text-primary">Bairro:</span>
+                      <span className="ml-2 text-text-secondary">Bela Vista</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-text-primary">Cidade:</span>
+                      <span className="ml-2 text-text-secondary">São Paulo – SP</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-text-primary">CEP:</span>
+                      <span className="ml-2 text-text-secondary">01310-200</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-text-primary">Telefone:</span>
+                      <span className="ml-2 text-text-secondary">(61) 992578817</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-text-primary">E-mail:</span>
+                      <span className="ml-2 text-text-secondary">contato@corpvox.com.br</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Alert sobre Informações Exatas */}
+              <div className="bg-amber-50 border-l-4 border-amber-500 p-4">
+                <div className="flex items-start">
+                  <svg className="w-5 h-5 text-amber-500 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  <div>
+                    <h5 className="font-semibold text-amber-900 mb-1">Atenção - Informações Obrigatórias</h5>
+                    <p className="text-sm text-amber-800">
+                      A Nota Fiscal somente será considerada válida se emitida EXATAMENTE com as informações acima: descrição do serviço e todos os dados da CorpVox.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Upload Section */}
+              <div>
+                <h4 className="font-semibold text-text-primary mb-3">Enviar Nota Fiscal</h4>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <input
+                    type="file"
+                    id={`nf-upload-dashboard-${selectedBenefit.id}`}
+                    accept=".pdf,.xml"
+                    onChange={handleFileUpload}
+                    disabled={uploading}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor={`nf-upload-dashboard-${selectedBenefit.id}`}
+                    className="cursor-pointer inline-flex flex-col items-center"
+                  >
+                    <svg className="w-12 h-12 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <span className="text-sm font-medium text-text-primary">
+                      {uploading ? 'Enviando...' : 'Clique para selecionar o arquivo'}
+                    </span>
+                    <span className="text-xs text-text-muted mt-1">
+                      PDF ou XML (máx. 10MB)
+                    </span>
+                  </label>
+                </div>
+                {uploadError && (
+                  <p className="text-sm text-red-600 mt-2">{uploadError}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end space-x-3 rounded-b-xl">
+              <button
+                onClick={() => {
+                  setShowNFModal(false);
+                  setSelectedBenefit(null);
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

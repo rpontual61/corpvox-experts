@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { DollarSign, Upload, CheckCircle2, Clock, FileText, Calendar, AlertCircle, ArrowRight } from 'lucide-react';
+import { DollarSign, Upload, CheckCircle2, Clock, FileText, Calendar, AlertCircle, ArrowRight, Search } from 'lucide-react';
 import { ExpertUser, ExpertBenefit, ExpertIndication } from '../../types/database.types';
 import { supabase, formatCurrency, formatDate, uploadExpertNF } from '../../lib/supabase';
 import LoadingSpinner from '../LoadingSpinner';
@@ -16,6 +16,7 @@ export default function BenefitsPage({ expert }: BenefitsPageProps) {
   const [benefits, setBenefits] = useState<BenefitWithIndication[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const [stats, setStats] = useState({
     total: 0,
     pago: 0,
@@ -135,7 +136,7 @@ export default function BenefitsPage({ expert }: BenefitsPageProps) {
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
           <p className="text-xs font-medium text-text-primary mb-2">
-            Liberado para emissão de Nota Fiscal
+            Liberada emissão de Nota Fiscal
           </p>
           <p className="text-lg font-bold text-text-primary">
             {formatCurrency(stats.liberado_para_nf)}
@@ -155,7 +156,7 @@ export default function BenefitsPage({ expert }: BenefitsPageProps) {
           <p className="text-xs font-medium text-text-primary mb-2">
             Notas recusadas
           </p>
-          <p className="text-lg font-bold text-red-600">
+          <p className="text-lg font-bold text-text-primary">
             {formatCurrency(stats.nf_recusada)}
           </p>
         </div>
@@ -170,44 +171,75 @@ export default function BenefitsPage({ expert }: BenefitsPageProps) {
         </div>
       </div>
 
-      {/* Filter */}
-      <div className="flex items-center justify-between mb-4">
+      {/* Divider */}
+      <div className="py-8">
+        <div className="border-t border-gray-200"></div>
+      </div>
+
+      {/* Search and Filter */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
         <h3 className="text-lg font-semibold text-text-primary">
           Lista de Benefícios
         </h3>
-        <div className="flex items-center space-x-3">
-          <label htmlFor="status-filter" className="text-sm text-text-muted">
-            Filtrar por status:
-          </label>
-          <select
-            id="status-filter"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-          >
-            <option value="all">Todos</option>
-            <option value="aguardando_pagamento_cliente">Aguardando pagamento cliente</option>
-            <option value="liberado_para_nf">Aguardando emissão da sua nota fiscal</option>
-            <option value="nf_enviada">Processando pagamento</option>
-            <option value="pago">Pago</option>
-          </select>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+          {/* Search */}
+          <div className="relative flex-1 sm:w-80">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Buscar por empresa..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+          {/* Status Filter */}
+          <div className="flex items-center space-x-3">
+            <label htmlFor="benefit-status-filter" className="text-sm text-text-muted whitespace-nowrap">
+              Filtrar por status:
+            </label>
+            <select
+              id="benefit-status-filter"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="all">Todos</option>
+              <option value="aguardando_pagamento_cliente">Aguardando pagamento cliente</option>
+              <option value="liberado_para_nf">Liberada emissão de Nota Fiscal</option>
+              <option value="aguardando_conferencia">Conferindo Nota Fiscal</option>
+              <option value="nf_recusada">Notas recusadas</option>
+              <option value="processando_pagamento">Pagamento agendado</option>
+              <option value="pago">Pago</option>
+            </select>
+          </div>
         </div>
       </div>
 
       {/* Benefits Grid */}
-      {benefits.filter(b => statusFilter === 'all' || b.status === statusFilter).length === 0 ? (
+      {benefits.filter(b => {
+        const matchesStatus = statusFilter === 'all' || b.status === statusFilter;
+        const matchesSearch = searchTerm === '' ||
+          (b.indication?.empresa_nome && b.indication.empresa_nome.toLowerCase().includes(searchTerm.toLowerCase()));
+        return matchesStatus && matchesSearch;
+      }).length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 px-6 py-12 text-center">
           <DollarSign className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <p className="text-text-muted">
-            {statusFilter === 'all'
-              ? 'Você ainda não possui benefícios registrados'
-              : 'Nenhum benefício encontrado com esse status'}
+            {searchTerm || statusFilter !== 'all'
+              ? 'Nenhum benefício encontrado'
+              : 'Você ainda não possui benefícios registrados'}
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {benefits
-            .filter(b => statusFilter === 'all' || b.status === statusFilter)
+            .filter(b => {
+              const matchesStatus = statusFilter === 'all' || b.status === statusFilter;
+              const matchesSearch = searchTerm === '' ||
+                (b.indication?.empresa_nome && b.indication.empresa_nome.toLowerCase().includes(searchTerm.toLowerCase()));
+              return matchesStatus && matchesSearch;
+            })
             .map((benefit) => (
               <BenefitCard
                 key={benefit.id}
@@ -292,27 +324,27 @@ function BenefitCard({
             {benefit.indication?.empresa_nome || 'Empresa'}
           </h3>
           {benefit.status === 'pago' ? (
-            <span className="px-2.5 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+            <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-medium">
               Pago
             </span>
           ) : benefit.status === 'processando_pagamento' ? (
-            <span className="px-2.5 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+            <span className="px-2.5 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
               Pagamento agendado
             </span>
           ) : benefit.status === 'aguardando_conferencia' ? (
-            <span className="px-2.5 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium">
+            <span className="px-2.5 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
               Conferindo Nota Fiscal
             </span>
-          ) : benefit.status === 'nf_enviada' ? (
-            <span className="px-2.5 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
-              Processando pagamento
+          ) : benefit.status === 'nf_recusada' ? (
+            <span className="px-2.5 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">
+              NF Recusada
             </span>
           ) : benefit.status === 'liberado_para_nf' ? (
-            <span className="px-2.5 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+            <span className="px-2.5 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
               Emita sua nota fiscal
             </span>
           ) : benefit.status === 'aguardando_pagamento_cliente' ? (
-            <span className="px-2.5 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
+            <span className="px-2.5 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">
               Aguardando pagamento cliente
             </span>
           ) : (
@@ -390,7 +422,7 @@ function BenefitCard({
         {canSendNF && (
           <button
             onClick={() => setShowNFModal(true)}
-            className="w-full mt-4 py-3 px-4 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm flex items-center justify-center space-x-2"
+            className="w-full mt-4 py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm flex items-center justify-center space-x-2"
           >
             <span>🎉</span>
             <span>Enviar Nota Fiscal</span>

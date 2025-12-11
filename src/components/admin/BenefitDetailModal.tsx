@@ -289,15 +289,15 @@ export default function BenefitDetailModal({ benefit, admin, onClose, onUpdate }
   const getBenefitStatusColor = (status: string) => {
     switch (status) {
       case 'aguardando_pagamento_cliente':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-gray-100 text-gray-800';
       case 'liberado_para_nf':
-        return 'bg-green-100 text-green-800';
+        return 'bg-blue-100 text-blue-800';
       case 'aguardando_conferencia':
-        return 'bg-orange-100 text-orange-800';
+        return 'bg-purple-100 text-purple-800';
       case 'nf_recusada':
         return 'bg-red-100 text-red-800';
       case 'processando_pagamento':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-yellow-100 text-yellow-800';
       case 'pago':
         return 'bg-emerald-100 text-emerald-800';
       default:

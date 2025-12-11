@@ -174,7 +174,7 @@ export default function IndicationsManagementPage({ admin }: IndicationsManageme
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <div className="bg-white rounded-lg shadow p-6">
           <p className="text-sm text-gray-600">Total</p>
           <p className="text-2xl font-bold text-gray-900">{indications.length}</p>
@@ -185,15 +185,21 @@ export default function IndicationsManagementPage({ admin }: IndicationsManageme
             {indications.filter(i => i.status === 'aguardando_validacao').length}
           </p>
         </div>
+        <div className="bg-red-50 rounded-lg shadow p-6">
+          <p className="text-sm text-red-800">Validação Recusada</p>
+          <p className="text-2xl font-bold text-red-900">
+            {indications.filter(i => i.status === 'validacao_recusada').length}
+          </p>
+        </div>
         <div className="bg-purple-50 rounded-lg shadow p-6">
           <p className="text-sm text-purple-800">Em Contato</p>
           <p className="text-2xl font-bold text-purple-900">
             {indications.filter(i => i.status === 'em_contato').length}
           </p>
         </div>
-        <div className="bg-green-50 rounded-lg shadow p-6">
-          <p className="text-sm text-green-800">Contratou!</p>
-          <p className="text-2xl font-bold text-green-900">
+        <div className="bg-emerald-50 rounded-lg shadow p-6">
+          <p className="text-sm text-emerald-800">Contratou!</p>
+          <p className="text-2xl font-bold text-emerald-900">
             {indications.filter(i => i.status === 'contratou').length}
           </p>
         </div>

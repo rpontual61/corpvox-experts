@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, Search, Filter, Calendar, Building2, User, Phone, Mail, X, AlertCircle, CheckCircle2, ArrowRight, GraduationCap, CreditCard } from 'lucide-react';
 import { ExpertUser, ExpertIndication } from '../../types/database.types';
-import { supabase, formatDate, formatCNPJ, validateCNPJ, getIndicationStatusColor, getIndicationStatusDisplay, canCreateIndications, getClientIP } from '../../lib/supabase';
+import { supabase, formatDate, formatCNPJ, formatCurrency, validateCNPJ, getIndicationStatusColor, getIndicationStatusDisplay, canCreateIndications, getClientIP } from '../../lib/supabase';
 import LoadingSpinner from '../LoadingSpinner';
 
 interface IndicationsPageProps {
@@ -92,6 +92,54 @@ export default function IndicationsPage({ expert, onNavigate, initialMode = 'lis
         </button>
       </div>
 
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <p className="text-xs font-medium text-text-primary mb-2">
+            Total de Indicações
+          </p>
+          <p className="text-lg font-bold text-text-primary">
+            {indications.length}
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <p className="text-xs font-medium text-text-primary mb-2">
+            Aguardando Validação
+          </p>
+          <p className="text-lg font-bold text-text-primary">
+            {indications.filter(i => i.status === 'aguardando_validacao').length}
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <p className="text-xs font-medium text-text-primary mb-2">
+            Em Contato
+          </p>
+          <p className="text-lg font-bold text-text-primary">
+            {indications.filter(i => i.status === 'em_contato').length}
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <p className="text-xs font-medium text-text-primary mb-2">
+            Contratou!
+          </p>
+          <p className="text-lg font-bold text-text-primary">
+            {indications.filter(i => i.status === 'contratou').length}
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <p className="text-xs font-medium text-text-primary mb-2">
+            Perdidos
+          </p>
+          <p className="text-lg font-bold text-text-primary">
+            {indications.filter(i => i.status === 'perdido').length}
+          </p>
+        </div>
+      </div>
+
       {/* Setup Tasks - only shown if user needs to complete setup */}
       {!canIndicate && (
         <div className="bg-orange-50 border border-orange-200 rounded-xl p-6">
@@ -154,36 +202,44 @@ export default function IndicationsPage({ expert, onNavigate, initialMode = 'lis
         </div>
       )}
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
+      {/* Divider */}
+      <div className="py-8">
+        <div className="border-t border-gray-200"></div>
+      </div>
+
+      {/* Search and Filter */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+        <h3 className="text-lg font-semibold text-text-primary">
+          Lista de Indicações
+        </h3>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
           {/* Search */}
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted w-5 h-5" />
+          <div className="relative flex-1 sm:w-80">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted w-4 h-4" />
             <input
               type="text"
               placeholder="Buscar por empresa, CNPJ ou contato..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
-
           {/* Status Filter */}
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted w-5 h-5" />
+          <div className="flex items-center space-x-3">
+            <label htmlFor="indication-status-filter" className="text-sm text-text-muted whitespace-nowrap">
+              Filtrar por status:
+            </label>
             <select
+              id="indication-status-filter"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 appearance-none bg-white"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
-              <option value="all">Todos os status</option>
+              <option value="all">Todos</option>
               <option value="aguardando_validacao">Aguardando Validação</option>
               <option value="em_contato">CorpVox em contato</option>
               <option value="contratou">Contratou!</option>
-              <option value="liberado_envio_nf">Liberado Envio NF</option>
-              <option value="nf_enviada">NF Enviada</option>
-              <option value="pago">Pago</option>
+              <option value="perdido">Não contratou</option>
               <option value="validacao_recusada">Validação Recusada</option>
             </select>
           </div>
@@ -211,7 +267,7 @@ export default function IndicationsPage({ expert, onNavigate, initialMode = 'lis
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredIndications.map((indication) => (
-            <IndicationCard key={indication.id} indication={indication} />
+            <IndicationCard key={indication.id} indication={indication} onNavigate={onNavigate} />
           ))}
         </div>
       )}
@@ -220,8 +276,39 @@ export default function IndicationsPage({ expert, onNavigate, initialMode = 'lis
 }
 
 // Indication Card Component
-function IndicationCard({ indication }: { indication: ExpertIndication }) {
+function IndicationCard({ indication, onNavigate }: { indication: ExpertIndication; onNavigate?: (page: string) => void }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [benefitValue, setBenefitValue] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (indication.status === 'contratou') {
+      loadBenefitValue();
+    }
+  }, [indication.id, indication.status]);
+
+  const loadBenefitValue = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('experts_benefits')
+        .select('valor_beneficio')
+        .eq('indication_id', indication.id)
+        .single();
+
+      if (!error && data) {
+        setBenefitValue(data.valor_beneficio);
+      }
+    } catch (error) {
+      console.error('Error loading benefit value:', error);
+    }
+  };
+
+  const handleNavigateToBenefits = () => {
+    if (onNavigate) {
+      onNavigate('beneficios');
+    } else {
+      window.location.href = '/#/beneficios';
+    }
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
@@ -240,51 +327,65 @@ function IndicationCard({ indication }: { indication: ExpertIndication }) {
           </div>
         </div>
 
+        {/* Mensagem de Parabéns - Contratou */}
+        {indication.status === 'contratou' && benefitValue !== null && (
+          <div className="mt-3 bg-green-50 border border-green-200 rounded-lg p-3">
+            <p className="text-sm text-green-900">
+              🎉 Essa indicação gerou um benefício de{' '}
+              <strong className="text-green-700">{formatCurrency(benefitValue)}</strong> para você!{' '}
+              <button
+                onClick={handleNavigateToBenefits}
+                className="font-bold text-primary-600 hover:text-primary-700 underline"
+              >
+                Veja aqui
+              </button>
+            </p>
+          </div>
+        )}
+
       {isExpanded && (
-        <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">
+          <div className="flex items-start space-x-3">
+            <User className="w-5 h-5 text-text-muted flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs text-text-muted">Contato</p>
+              <p className="text-sm text-text-primary font-medium">
+                {indication.contato_nome}
+              </p>
+            </div>
+          </div>
+
+          {indication.contato_whatsapp && (
             <div className="flex items-start space-x-3">
-              <User className="w-5 h-5 text-text-muted flex-shrink-0 mt-0.5" />
+              <Phone className="w-5 h-5 text-text-muted flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-xs text-text-muted">Contato</p>
+                <p className="text-xs text-text-muted">WhatsApp</p>
                 <p className="text-sm text-text-primary font-medium">
-                  {indication.contato_nome}
+                  {indication.contato_whatsapp}
                 </p>
               </div>
             </div>
+          )}
 
-            {indication.contato_whatsapp && (
-              <div className="flex items-start space-x-3">
-                <Phone className="w-5 h-5 text-text-muted flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs text-text-muted">WhatsApp</p>
-                  <p className="text-sm text-text-primary font-medium">
-                    {indication.contato_whatsapp}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {indication.contato_email && (
-              <div className="flex items-start space-x-3">
-                <Mail className="w-5 h-5 text-text-muted flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs text-text-muted">E-mail</p>
-                  <p className="text-sm text-text-primary font-medium">
-                    {indication.contato_email}
-                  </p>
-                </div>
-              </div>
-            )}
-
+          {indication.contato_email && (
             <div className="flex items-start space-x-3">
-              <Calendar className="w-5 h-5 text-text-muted flex-shrink-0 mt-0.5" />
+              <Mail className="w-5 h-5 text-text-muted flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-xs text-text-muted">Data da Indicação</p>
+                <p className="text-xs text-text-muted">E-mail</p>
                 <p className="text-sm text-text-primary font-medium">
-                  {formatDate(indication.criado_em)}
+                  {indication.contato_email}
                 </p>
               </div>
+            </div>
+          )}
+
+          <div className="flex items-start space-x-3">
+            <Calendar className="w-5 h-5 text-text-muted flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs text-text-muted">Data da Indicação</p>
+              <p className="text-sm text-text-primary font-medium">
+                {formatDate(indication.criado_em)}
+              </p>
             </div>
           </div>
 

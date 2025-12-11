@@ -148,6 +148,20 @@ export const CRMKanbanPage: React.FC<CRMKanbanPageProps> = ({ admin }) => {
       // Calcular datas automaticamente
       const calculatedDates = calculateBenefitDates(benefitData.data_contrato_cliente);
 
+      // 0. Verificar se já existe um benefício para esta indicação
+      const { data: existingBenefit, error: checkError } = await supabase
+        .from('experts_benefits')
+        .select('id')
+        .eq('indication_id', indicationToContract.id)
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+
+      if (existingBenefit) {
+        alert('Já existe um benefício criado para esta indicação. Não é possível criar duplicados.');
+        return;
+      }
+
       // 1. Atualizar status da indicação para "contratou"
       const { error: indicationError } = await supabase
         .from('experts_indications')

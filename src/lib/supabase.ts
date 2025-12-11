@@ -450,7 +450,7 @@ export const getIndicationStatusColor = (status: string): string => {
     aguardando_validacao: 'bg-yellow-100 text-yellow-800',
     validacao_recusada: 'bg-red-100 text-red-800',
     em_contato: 'bg-purple-100 text-purple-800',
-    contratou: 'bg-green-100 text-green-800',
+    contratou: 'bg-emerald-100 text-emerald-800',
     perdido: 'bg-gray-100 text-gray-800',
     liberado_envio_nf: 'bg-teal-100 text-teal-800',
     nf_enviada: 'bg-cyan-100 text-cyan-800',

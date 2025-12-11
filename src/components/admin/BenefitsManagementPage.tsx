@@ -68,13 +68,13 @@ export default function BenefitsManagementPage({ admin }: BenefitsManagementPage
     }
   };
 
-  // Filter benefits waiting for NF (liberado_para_nf status)
-  const waitingForNF = benefits.filter((benefit) => {
+  // Filter benefits waiting for NF review (aguardando_conferencia status)
+  const waitingForNFReview = benefits.filter((benefit) => {
     const matchesSearch =
       (benefit.expert_nome && benefit.expert_nome.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (benefit.empresa_nome && benefit.empresa_nome.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    return benefit.status === 'liberado_para_nf' && matchesSearch;
+    return benefit.status === 'aguardando_conferencia' && matchesSearch;
   });
 
   // Filter all benefits
@@ -92,15 +92,15 @@ export default function BenefitsManagementPage({ admin }: BenefitsManagementPage
   const getBenefitStatusColor = (status: string) => {
     switch (status) {
       case 'aguardando_pagamento_cliente':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-gray-100 text-gray-800';
       case 'liberado_para_nf':
-        return 'bg-green-100 text-green-800';
+        return 'bg-blue-100 text-blue-800';
       case 'aguardando_conferencia':
-        return 'bg-orange-100 text-orange-800';
+        return 'bg-purple-100 text-purple-800';
       case 'nf_recusada':
         return 'bg-red-100 text-red-800';
       case 'processando_pagamento':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-yellow-100 text-yellow-800';
       case 'pago':
         return 'bg-emerald-100 text-emerald-800';
       default:
@@ -148,27 +148,45 @@ export default function BenefitsManagementPage({ admin }: BenefitsManagementPage
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
         <div className="bg-white rounded-lg shadow p-6">
           <p className="text-sm text-gray-600">Total</p>
           <p className="text-2xl font-bold text-gray-900">{totalBenefits}</p>
         </div>
-        <div className="bg-yellow-50 rounded-lg shadow p-6">
-          <p className="text-sm text-yellow-800">Aguardando Cliente</p>
-          <p className="text-2xl font-bold text-yellow-900">
+        <div className="bg-gray-50 rounded-lg shadow p-6">
+          <p className="text-sm text-gray-800">Aguardando Cliente</p>
+          <p className="text-2xl font-bold text-gray-900">
             {benefits.filter(b => b.status === 'aguardando_pagamento_cliente').length}
           </p>
         </div>
-        <div className="bg-green-50 rounded-lg shadow p-6">
-          <p className="text-sm text-green-800">Liberado para NF</p>
-          <p className="text-2xl font-bold text-green-900">
+        <div className="bg-blue-50 rounded-lg shadow p-6">
+          <p className="text-sm text-blue-800">Liberado para NF</p>
+          <p className="text-2xl font-bold text-blue-900">
             {benefits.filter(b => b.status === 'liberado_para_nf').length}
           </p>
         </div>
-        <div className="bg-blue-50 rounded-lg shadow p-6">
-          <p className="text-sm text-blue-800">NF Enviada</p>
-          <p className="text-2xl font-bold text-blue-900">
-            {benefits.filter(b => b.status === 'nf_enviada').length}
+        <div className="bg-purple-50 rounded-lg shadow p-6">
+          <p className="text-sm text-purple-800">Conferir Nota</p>
+          <p className="text-2xl font-bold text-purple-900">
+            {benefits.filter(b => b.status === 'aguardando_conferencia').length}
+          </p>
+        </div>
+        <div className="bg-red-50 rounded-lg shadow p-6">
+          <p className="text-sm text-red-800">NF Recusada</p>
+          <p className="text-2xl font-bold text-red-900">
+            {benefits.filter(b => b.status === 'nf_recusada').length}
+          </p>
+        </div>
+        <div className="bg-yellow-50 rounded-lg shadow p-6">
+          <p className="text-sm text-yellow-800">Pagamento agendado</p>
+          <p className="text-2xl font-bold text-yellow-900">
+            {benefits.filter(b => b.status === 'processando_pagamento').length}
+          </p>
+        </div>
+        <div className="bg-emerald-50 rounded-lg shadow p-6">
+          <p className="text-sm text-emerald-800">Pago</p>
+          <p className="text-2xl font-bold text-emerald-900">
+            {benefits.filter(b => b.status === 'pago').length}
           </p>
         </div>
       </div>
@@ -196,29 +214,32 @@ export default function BenefitsManagementPage({ admin }: BenefitsManagementPage
               <option value="all">Todos os status</option>
               <option value="aguardando_pagamento_cliente">Aguardando Cliente</option>
               <option value="liberado_para_nf">Liberado para NF</option>
-              <option value="nf_enviada">NF Enviada</option>
+              <option value="aguardando_conferencia">Conferir Nota</option>
+              <option value="nf_recusada">NF Recusada</option>
+              <option value="processando_pagamento">Pagamento agendado</option>
               <option value="pago">Pago</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* Waiting for NF Table */}
+      {/* Waiting for NF Review Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="bg-green-50 border-b border-green-200 px-6 py-4">
-          <h2 className="text-xl font-bold text-green-900">
-            Liberados para NF ({waitingForNF.length})
+        <div className="bg-purple-50 border-b border-purple-200 px-6 py-4">
+          <h2 className="text-xl font-bold text-purple-900">
+            Conferir Nota Fiscal ({waitingForNFReview.length})
           </h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full table-fixed">
             <colgroup>
-              <col className="w-[20%]" />
-              <col className="w-[20%]" />
-              <col className="w-[15%]" />
-              <col className="w-[15%]" />
-              <col className="w-[15%]" />
-              <col className="w-[15%]" />
+              <col className="w-[18%]" />
+              <col className="w-[18%]" />
+              <col className="w-[12%]" />
+              <col className="w-[12%]" />
+              <col className="w-[14%]" />
+              <col className="w-[14%]" />
+              <col className="w-[12%]" />
             </colgroup>
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
@@ -235,6 +256,9 @@ export default function BenefitsManagementPage({ admin }: BenefitsManagementPage
                   Data Contrato
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Pagamento Previsto
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -243,14 +267,14 @@ export default function BenefitsManagementPage({ admin }: BenefitsManagementPage
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {waitingForNF.length === 0 ? (
+              {waitingForNFReview.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
-                    Nenhum benefício liberado para NF
+                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                    Nenhuma nota fiscal aguardando conferência
                   </td>
                 </tr>
               ) : (
-                waitingForNF.map((benefit) => (
+                waitingForNFReview.map((benefit) => (
                   <tr key={benefit.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 text-sm text-gray-900">
                       {benefit.expert_nome}
@@ -263,6 +287,11 @@ export default function BenefitsManagementPage({ admin }: BenefitsManagementPage
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500">
                       {formatDate(benefit.data_contrato_cliente)}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getBenefitStatusColor(benefit.status)}`}>
+                        {getBenefitStatusDisplay(benefit.status)}
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500">
                       {formatDate(benefit.data_prevista_pagamento_beneficio)}
@@ -383,7 +412,7 @@ export default function BenefitsManagementPage({ admin }: BenefitsManagementPage
       {/* Summary */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <p className="text-sm text-blue-800">
-          <strong>{waitingForNF.length}</strong> benefícios liberados para NF • <strong>{allBenefits.length}</strong> benefícios no total
+          <strong>{waitingForNFReview.length}</strong> notas fiscais aguardando conferência • <strong>{allBenefits.length}</strong> benefícios no total
         </p>
       </div>
 

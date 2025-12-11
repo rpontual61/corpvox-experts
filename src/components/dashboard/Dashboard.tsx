@@ -742,7 +742,7 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
                         setSelectedBenefit(benefit);
                         setShowNFModal(true);
                       }}
-                      className="px-3 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-xs font-medium flex items-center space-x-1.5 whitespace-nowrap"
+                      className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs font-medium flex items-center space-x-1.5 whitespace-nowrap"
                     >
                       <span>🎉</span>
                       <span>Enviar nota fiscal</span>

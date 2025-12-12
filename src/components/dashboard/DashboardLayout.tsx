@@ -12,7 +12,8 @@ import {
   ChevronRight,
   AlertCircle,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  Plus
 } from 'lucide-react';
 import { ExpertUser } from '../../types/database.types';
 import { logoutExpert, formatCurrency, supabase } from '../../lib/supabase';
@@ -164,6 +165,20 @@ export default function DashboardLayout({ children, expert, currentPage, onNavig
                 );
               })}
             </ul>
+
+            {/* Nova Indicação Button */}
+            <div className="mt-4">
+              <button
+                onClick={() => {
+                  onNavigate('indicacoes:new');
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-lg text-sm font-semibold bg-primary-600 text-white hover:bg-primary-700 transition-colors shadow-lg"
+              >
+                <Plus className="w-5 h-5" strokeWidth={2} />
+                <span>Nova Indicação</span>
+              </button>
+            </div>
           </nav>
 
           {/* Logout Button */}

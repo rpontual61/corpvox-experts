@@ -93,7 +93,7 @@ export default function IndicationsPage({ expert, onNavigate, initialMode = 'lis
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
           <p className="text-xs font-medium text-text-primary mb-2">
             Total de Indicações
@@ -109,6 +109,15 @@ export default function IndicationsPage({ expert, onNavigate, initialMode = 'lis
           </p>
           <p className="text-lg font-bold text-text-primary">
             {indications.filter(i => i.status === 'aguardando_validacao').length}
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <p className="text-xs font-medium text-text-primary mb-2">
+            Invalidadas
+          </p>
+          <p className="text-lg font-bold text-text-primary">
+            {indications.filter(i => i.status === 'validacao_recusada').length}
           </p>
         </div>
 
@@ -132,7 +141,7 @@ export default function IndicationsPage({ expert, onNavigate, initialMode = 'lis
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
           <p className="text-xs font-medium text-text-primary mb-2">
-            Perdidos
+            Não contratou
           </p>
           <p className="text-lg font-bold text-text-primary">
             {indications.filter(i => i.status === 'perdido').length}
@@ -335,7 +344,7 @@ function IndicationCard({ indication, onNavigate }: { indication: ExpertIndicati
               <strong className="text-green-700">{formatCurrency(benefitValue)}</strong> para você!{' '}
               <button
                 onClick={handleNavigateToBenefits}
-                className="font-bold text-primary-600 hover:text-primary-700 underline"
+                className="font-bold text-green-600 hover:text-green-700 underline"
               >
                 Veja aqui
               </button>
@@ -444,13 +453,46 @@ function NewIndicationForm({ expert, onBack }: { expert: ExpertUser; onBack: () 
     contato_nome: '',
     contato_email: '',
     contato_whatsapp: '',
-    tipo_indicacao: 'relatorio_tecnico' as 'relatorio_tecnico' | 'email' | 'whatsapp_conversa',
+    tipo_indicacao: '' as '' | 'relatorio_tecnico' | 'email' | 'whatsapp_conversa',
     observacoes: '',
   });
   const [declaracaoAceita, setDeclaracaoAceita] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  // Mask functions
+  const formatCNPJMask = (value: string) => {
+    // Remove all non-digits
+    const numbers = value.replace(/\D/g, '');
+
+    // Apply CNPJ mask: 00.000.000/0000-00
+    if (numbers.length <= 2) return numbers;
+    if (numbers.length <= 5) return `${numbers.slice(0, 2)}.${numbers.slice(2)}`;
+    if (numbers.length <= 8) return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5)}`;
+    if (numbers.length <= 12) return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5, 8)}/${numbers.slice(8)}`;
+    return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5, 8)}/${numbers.slice(8, 12)}-${numbers.slice(12, 14)}`;
+  };
+
+  const formatPhoneMask = (value: string) => {
+    // Remove all non-digits
+    const numbers = value.replace(/\D/g, '');
+
+    // Apply phone mask: (00) 00000-0000
+    if (numbers.length <= 2) return numbers;
+    if (numbers.length <= 7) return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
+  };
+
+  const handleCNPJChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCNPJMask(e.target.value);
+    setFormData({ ...formData, empresa_cnpj: formatted });
+  };
+
+  const handleWhatsAppChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneMask(e.target.value);
+    setFormData({ ...formData, contato_whatsapp: formatted });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -480,8 +522,12 @@ function NewIndicationForm({ expert, onBack }: { expert: ExpertUser; onBack: () 
       newErrors.contato_nome = 'Nome do contato é obrigatório';
     }
 
-    if (!formData.contato_email && !formData.contato_whatsapp) {
-      newErrors.contato = 'Informe pelo menos e-mail ou WhatsApp';
+    if (!formData.contato_email.trim()) {
+      newErrors.contato_email = 'E-mail é obrigatório';
+    }
+
+    if (!formData.tipo_indicacao) {
+      newErrors.tipo_indicacao = 'Selecione como você indicou a empresa';
     }
 
     if (!declaracaoAceita) {
@@ -570,10 +616,10 @@ function NewIndicationForm({ expert, onBack }: { expert: ExpertUser; onBack: () 
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Empresa Section */}
-        <div>
-          <h3 className="text-lg font-semibold text-text-primary mb-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-text-primary mb-6">
             Dados da Empresa
           </h3>
           <div className="space-y-4">
@@ -600,7 +646,7 @@ function NewIndicationForm({ expert, onBack }: { expert: ExpertUser; onBack: () 
               <input
                 type="text"
                 value={formData.empresa_cnpj}
-                onChange={(e) => setFormData({ ...formData, empresa_cnpj: e.target.value })}
+                onChange={handleCNPJChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 placeholder="00.000.000/0000-00"
                 maxLength={18}
@@ -630,8 +676,8 @@ function NewIndicationForm({ expert, onBack }: { expert: ExpertUser; onBack: () 
         </div>
 
         {/* Contato Section */}
-        <div className="pt-6 border-t border-gray-200">
-          <h3 className="text-lg font-semibold text-text-primary mb-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-text-primary mb-6">
             Dados do Contato
           </h3>
           <div className="space-y-4">
@@ -654,7 +700,7 @@ function NewIndicationForm({ expert, onBack }: { expert: ExpertUser; onBack: () 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-2">
-                  E-mail
+                  E-mail *
                 </label>
                 <input
                   type="email"
@@ -663,6 +709,9 @@ function NewIndicationForm({ expert, onBack }: { expert: ExpertUser; onBack: () 
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   placeholder="joao@empresa.com"
                 />
+                {errors.contato_email && (
+                  <p className="text-sm text-red-600 mt-1">{errors.contato_email}</p>
+                )}
               </div>
 
               <div>
@@ -672,34 +721,39 @@ function NewIndicationForm({ expert, onBack }: { expert: ExpertUser; onBack: () 
                 <input
                   type="tel"
                   value={formData.contato_whatsapp}
-                  onChange={(e) => setFormData({ ...formData, contato_whatsapp: e.target.value })}
+                  onChange={handleWhatsAppChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   placeholder="(11) 99999-9999"
+                  maxLength={15}
                 />
               </div>
             </div>
-            {errors.contato && (
-              <p className="text-sm text-red-600">{errors.contato}</p>
-            )}
           </div>
         </div>
 
         {/* Tipo e Observações */}
-        <div className="pt-6 border-t border-gray-200">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-text-primary mb-6">
+            Informações Adicionais
+          </h3>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-text-primary mb-2">
-                Como você indicou esta empresa?
+                Como você indicou esta empresa? *
               </label>
               <select
                 value={formData.tipo_indicacao}
                 onChange={(e) => setFormData({ ...formData, tipo_indicacao: e.target.value as any })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               >
+                <option value="">Selecione</option>
                 <option value="relatorio_tecnico">Relatório Técnico</option>
                 <option value="email">E-mail</option>
                 <option value="whatsapp_conversa">Conversa no WhatsApp</option>
               </select>
+              {errors.tipo_indicacao && (
+                <p className="text-sm text-red-600 mt-1">{errors.tipo_indicacao}</p>
+              )}
             </div>
 
             <div>
@@ -718,7 +772,10 @@ function NewIndicationForm({ expert, onBack }: { expert: ExpertUser; onBack: () 
         </div>
 
         {/* Declaração */}
-        <div className="pt-6 border-t border-gray-200">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-text-primary mb-6">
+            Declaração
+          </h3>
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
             <label className="flex items-start space-x-3 cursor-pointer">
               <input

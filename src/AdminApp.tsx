@@ -4,6 +4,7 @@ import AdminLayout from './components/admin/AdminLayout';
 import IndicationsManagementPage from './components/admin/IndicationsManagementPage';
 import ExpertsManagementPage from './components/admin/ExpertsManagementPage';
 import BenefitsManagementPage from './components/admin/BenefitsManagementPage';
+import PaymentsPage from './components/admin/PaymentsPage';
 import { CRMKanbanPage } from './components/admin/CRMKanbanPage';
 import { AdminUser } from './types/database.types';
 import { verifyAdminSession, isAdminLoggedIn } from './lib/adminAuth';
@@ -71,19 +72,16 @@ function AdminApp() {
         <BenefitsManagementPage admin={admin} />
       )}
 
+      {currentPage === 'pagamentos' && (
+        <PaymentsPage />
+      )}
+
       {currentPage === 'experts' && (
         <ExpertsManagementPage admin={admin} />
       )}
 
       {currentPage === 'crm' && (
         <CRMKanbanPage admin={admin} />
-      )}
-
-      {currentPage === 'atividades' && (
-        <div className="text-center py-12">
-          <h2 className="text-2xl font-bold text-gray-900">Log de Atividades</h2>
-          <p className="text-gray-600 mt-2">Em desenvolvimento...</p>
-        </div>
       )}
     </AdminLayout>
   );

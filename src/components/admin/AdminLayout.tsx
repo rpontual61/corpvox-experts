@@ -9,7 +9,8 @@ import {
   X,
   Shield,
   Activity,
-  Kanban
+  Kanban,
+  DollarSign
 } from 'lucide-react';
 import { AdminUser } from '../../types/database.types';
 import { adminLogout } from '../../lib/adminAuth';
@@ -31,12 +32,11 @@ export default function AdminLayout({ admin, currentPage, onNavigate, onLogout, 
   };
 
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'indicacoes', label: 'Indicações', icon: FileText },
     { id: 'crm', label: 'CRM', icon: Kanban },
     { id: 'beneficios', label: 'Benefícios', icon: Gift },
+    { id: 'pagamentos', label: 'Pagamentos', icon: DollarSign },
     { id: 'experts', label: 'Experts', icon: Users },
-    { id: 'atividades', label: 'Atividades', icon: Activity },
   ];
 
   return (

@@ -724,7 +724,19 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
                       {benefit.indication?.empresa_nome || 'Empresa não identificada'}
                     </p>
                     <p className="text-sm text-text-muted mt-1">
-                      {new Date(benefit.criado_em).toLocaleDateString('pt-BR')}
+                      {benefit.status === 'aguardando_pagamento_cliente'
+                        ? 'Aguardando o primeiro pagamento da empresa.'
+                        : benefit.status === 'liberado_para_nf'
+                        ? `Liberado para emissão de nota fiscal desde ${formatDate(benefit.pode_enviar_nf_a_partir_de)}`
+                        : benefit.status === 'aguardando_conferencia'
+                        ? `Nota enviada em ${formatDate(benefit.nf_enviada_em)}. Estamos conferindo os dados.`
+                        : benefit.status === 'nf_recusada'
+                        ? 'Nota fiscal recusada. Faça o reenvio.'
+                        : benefit.status === 'processando_pagamento'
+                        ? `Pagamento previsto para ${formatDate(benefit.data_prevista_pagamento_beneficio)}`
+                        : benefit.status === 'pago'
+                        ? `Pago em ${formatDate(benefit.pagamento_data)}`
+                        : formatDate(benefit.criado_em)}
                     </p>
                   </div>
                   <div className="text-right">

@@ -100,7 +100,9 @@ export default function BenefitsManagementPage({ admin }: BenefitsManagementPage
       case 'nf_recusada':
         return 'bg-red-100 text-red-800';
       case 'processando_pagamento':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-gray-100 text-gray-800';
+      case 'agendado':
+        return 'bg-orange-100 text-orange-800';
       case 'pago':
         return 'bg-emerald-100 text-emerald-800';
       default:
@@ -119,7 +121,9 @@ export default function BenefitsManagementPage({ admin }: BenefitsManagementPage
       case 'nf_recusada':
         return 'NF Recusada';
       case 'processando_pagamento':
-        return 'Pagamento agendado';
+        return 'Processando pagamento';
+      case 'agendado':
+        return 'Pagamento Agendado';
       case 'pago':
         return 'Pago';
       default:
@@ -148,44 +152,50 @@ export default function BenefitsManagementPage({ admin }: BenefitsManagementPage
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-        <div className="bg-white rounded-lg shadow p-6">
-          <p className="text-sm text-gray-600">Total</p>
-          <p className="text-2xl font-bold text-gray-900">{totalBenefits}</p>
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+        <div className="bg-white rounded-lg shadow p-6 flex flex-col">
+          <p className="text-sm text-gray-600 mb-auto">Total</p>
+          <p className="text-2xl font-bold text-gray-900 mt-2">{totalBenefits}</p>
         </div>
-        <div className="bg-gray-50 rounded-lg shadow p-6">
-          <p className="text-sm text-gray-800">Aguardando Cliente</p>
-          <p className="text-2xl font-bold text-gray-900">
+        <div className="bg-gray-50 rounded-lg shadow p-6 flex flex-col">
+          <p className="text-sm text-gray-800 mb-auto">Aguardando Cliente</p>
+          <p className="text-2xl font-bold text-gray-900 mt-2">
             {benefits.filter(b => b.status === 'aguardando_pagamento_cliente').length}
           </p>
         </div>
-        <div className="bg-blue-50 rounded-lg shadow p-6">
-          <p className="text-sm text-blue-800">Liberado para NF</p>
-          <p className="text-2xl font-bold text-blue-900">
+        <div className="bg-blue-50 rounded-lg shadow p-6 flex flex-col">
+          <p className="text-sm text-blue-800 mb-auto">Liberado para NF</p>
+          <p className="text-2xl font-bold text-blue-900 mt-2">
             {benefits.filter(b => b.status === 'liberado_para_nf').length}
           </p>
         </div>
-        <div className="bg-purple-50 rounded-lg shadow p-6">
-          <p className="text-sm text-purple-800">Conferir Nota</p>
-          <p className="text-2xl font-bold text-purple-900">
+        <div className="bg-purple-50 rounded-lg shadow p-6 flex flex-col">
+          <p className="text-sm text-purple-800 mb-auto">Conferir Nota</p>
+          <p className="text-2xl font-bold text-purple-900 mt-2">
             {benefits.filter(b => b.status === 'aguardando_conferencia').length}
           </p>
         </div>
-        <div className="bg-red-50 rounded-lg shadow p-6">
-          <p className="text-sm text-red-800">NF Recusada</p>
-          <p className="text-2xl font-bold text-red-900">
+        <div className="bg-red-50 rounded-lg shadow p-6 flex flex-col">
+          <p className="text-sm text-red-800 mb-auto">NF Recusada</p>
+          <p className="text-2xl font-bold text-red-900 mt-2">
             {benefits.filter(b => b.status === 'nf_recusada').length}
           </p>
         </div>
-        <div className="bg-yellow-50 rounded-lg shadow p-6">
-          <p className="text-sm text-yellow-800">Pagamento agendado</p>
-          <p className="text-2xl font-bold text-yellow-900">
+        <div className="bg-gray-50 rounded-lg shadow p-6 flex flex-col">
+          <p className="text-sm text-gray-800 mb-auto">Processando pagamento</p>
+          <p className="text-2xl font-bold text-gray-900 mt-2">
             {benefits.filter(b => b.status === 'processando_pagamento').length}
           </p>
         </div>
-        <div className="bg-emerald-50 rounded-lg shadow p-6">
-          <p className="text-sm text-emerald-800">Pago</p>
-          <p className="text-2xl font-bold text-emerald-900">
+        <div className="bg-orange-50 rounded-lg shadow p-6 flex flex-col">
+          <p className="text-sm text-orange-800 mb-auto">Pagamento Agendado</p>
+          <p className="text-2xl font-bold text-orange-900 mt-2">
+            {benefits.filter(b => b.status === 'agendado').length}
+          </p>
+        </div>
+        <div className="bg-emerald-50 rounded-lg shadow p-6 flex flex-col">
+          <p className="text-sm text-emerald-800 mb-auto">Pago</p>
+          <p className="text-2xl font-bold text-emerald-900 mt-2">
             {benefits.filter(b => b.status === 'pago').length}
           </p>
         </div>
@@ -216,7 +226,8 @@ export default function BenefitsManagementPage({ admin }: BenefitsManagementPage
               <option value="liberado_para_nf">Liberado para NF</option>
               <option value="aguardando_conferencia">Conferir Nota</option>
               <option value="nf_recusada">NF Recusada</option>
-              <option value="processando_pagamento">Pagamento agendado</option>
+              <option value="processando_pagamento">Processando pagamento</option>
+              <option value="agendado">Pagamento Agendado</option>
               <option value="pago">Pago</option>
             </select>
           </div>
@@ -275,7 +286,14 @@ export default function BenefitsManagementPage({ admin }: BenefitsManagementPage
                 </tr>
               ) : (
                 waitingForNFReview.map((benefit) => (
-                  <tr key={benefit.id} className="hover:bg-gray-50">
+                  <tr
+                    key={benefit.id}
+                    onClick={() => {
+                      setSelectedBenefit(benefit);
+                      setShowModal(true);
+                    }}
+                    className="hover:bg-gray-50 cursor-pointer transition-colors"
+                  >
                     <td className="px-6 py-4 text-sm text-gray-900">
                       {benefit.expert_nome}
                     </td>
@@ -296,7 +314,7 @@ export default function BenefitsManagementPage({ admin }: BenefitsManagementPage
                     <td className="px-6 py-4 text-sm text-gray-500">
                       {formatDate(benefit.data_prevista_pagamento_beneficio)}
                     </td>
-                    <td className="px-6 py-4 text-right text-sm font-medium">
+                    <td className="px-6 py-4 text-right text-sm font-medium" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => {
                           setSelectedBenefit(benefit);
@@ -368,7 +386,14 @@ export default function BenefitsManagementPage({ admin }: BenefitsManagementPage
                 </tr>
               ) : (
                 allBenefits.map((benefit) => (
-                  <tr key={benefit.id} className="hover:bg-gray-50">
+                  <tr
+                    key={benefit.id}
+                    onClick={() => {
+                      setSelectedBenefit(benefit);
+                      setShowModal(true);
+                    }}
+                    className="hover:bg-gray-50 cursor-pointer transition-colors"
+                  >
                     <td className="px-6 py-4 text-sm text-gray-900">
                       {benefit.expert_nome}
                     </td>
@@ -389,7 +414,7 @@ export default function BenefitsManagementPage({ admin }: BenefitsManagementPage
                     <td className="px-6 py-4 text-sm text-gray-500">
                       {formatDate(benefit.data_prevista_pagamento_beneficio)}
                     </td>
-                    <td className="px-6 py-4 text-right text-sm font-medium">
+                    <td className="px-6 py-4 text-right text-sm font-medium" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => {
                           setSelectedBenefit(benefit);

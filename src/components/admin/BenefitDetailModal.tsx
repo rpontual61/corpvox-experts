@@ -22,6 +22,8 @@ export default function BenefitDetailModal({ benefit, admin, onClose, onUpdate }
   const [showMarkAsPaidConfirm, setShowMarkAsPaidConfirm] = useState(false);
   const [showApproveNFConfirm, setShowApproveNFConfirm] = useState(false);
   const [showRejectNFModal, setShowRejectNFModal] = useState(false);
+  const [showSchedulePaymentModal, setShowSchedulePaymentModal] = useState(false);
+  const [showConfirmPaymentModal, setShowConfirmPaymentModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
@@ -30,6 +32,7 @@ export default function BenefitDetailModal({ benefit, admin, onClose, onUpdate }
     type: 'info' as 'success' | 'error' | 'warning' | 'info'
   });
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [scheduledDate, setScheduledDate] = useState('');
 
   // Buscar dados do expert e gerar signed URL para NF
   useEffect(() => {
@@ -286,6 +289,112 @@ export default function BenefitDetailModal({ benefit, admin, onClose, onUpdate }
     }
   };
 
+  const handleSchedulePayment = async () => {
+    if (!scheduledDate) {
+      setAlertConfig({
+        title: 'Atenção',
+        message: 'Por favor, selecione uma data para o agendamento.',
+        type: 'warning'
+      });
+      setShowAlert(true);
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('experts_benefits')
+        .update({
+          status: 'agendado',
+          data_prevista_pagamento_beneficio: scheduledDate,
+          atualizado_em: new Date().toISOString()
+        })
+        .eq('id', benefit.id);
+
+      if (error) throw error;
+
+      await logAdminActivity(
+        admin.id,
+        'schedule_payment',
+        'benefit',
+        benefit.id,
+        { scheduled_date: scheduledDate }
+      );
+
+      setShowSchedulePaymentModal(false);
+      setAlertConfig({
+        title: 'Sucesso!',
+        message: 'Pagamento agendado com sucesso!',
+        type: 'success'
+      });
+      setShowAlert(true);
+
+      setTimeout(() => {
+        onUpdate();
+        onClose();
+      }, 1500);
+    } catch (error) {
+      console.error('Error scheduling payment:', error);
+      setShowSchedulePaymentModal(false);
+      setAlertConfig({
+        title: 'Erro',
+        message: 'Erro ao agendar pagamento. Tente novamente.',
+        type: 'error'
+      });
+      setShowAlert(true);
+    }
+  };
+
+  const handleConfirmPayment = async () => {
+    try {
+      const { error } = await supabase
+        .from('experts_benefits')
+        .update({
+          status: 'pago',
+          pagamento_data: new Date().toISOString().split('T')[0],
+          atualizado_em: new Date().toISOString()
+        })
+        .eq('id', benefit.id);
+
+      if (error) throw error;
+
+      // Update indication status
+      await supabase
+        .from('experts_indications')
+        .update({ status: 'pago' })
+        .eq('id', benefit.indication_id);
+
+      await logAdminActivity(
+        admin.id,
+        'confirm_payment',
+        'benefit',
+        benefit.id,
+        { payment_date: new Date().toISOString().split('T')[0], valor: benefit.valor_beneficio }
+      );
+
+      setShowConfirmPaymentModal(false);
+      setAlertConfig({
+        title: 'Sucesso!',
+        message: 'Pagamento confirmado com sucesso!',
+        type: 'success'
+      });
+      setShowAlert(true);
+
+      setTimeout(() => {
+        onUpdate();
+        onClose();
+      }, 1500);
+    } catch (error) {
+      console.error('Error confirming payment:', error);
+      setShowConfirmPaymentModal(false);
+      setAlertConfig({
+        title: 'Erro',
+        message: 'Erro ao confirmar pagamento. Tente novamente.',
+        type: 'error'
+      });
+      setShowAlert(true);
+    }
+  };
+
   const getBenefitStatusColor = (status: string) => {
     switch (status) {
       case 'aguardando_pagamento_cliente':
@@ -297,7 +406,9 @@ export default function BenefitDetailModal({ benefit, admin, onClose, onUpdate }
       case 'nf_recusada':
         return 'bg-red-100 text-red-800';
       case 'processando_pagamento':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-gray-100 text-gray-800';
+      case 'agendado':
+        return 'bg-orange-100 text-orange-800';
       case 'pago':
         return 'bg-emerald-100 text-emerald-800';
       default:
@@ -316,7 +427,9 @@ export default function BenefitDetailModal({ benefit, admin, onClose, onUpdate }
       case 'nf_recusada':
         return 'NF Recusada';
       case 'processando_pagamento':
-        return 'Pagamento agendado';
+        return 'Processando pagamento';
+      case 'agendado':
+        return 'Pagamento Agendado';
       case 'pago':
         return 'Pago';
       default:
@@ -325,7 +438,7 @@ export default function BenefitDetailModal({ benefit, admin, onClose, onUpdate }
   };
 
   const modalContent = (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[99999]">
       <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
@@ -373,42 +486,77 @@ export default function BenefitDetailModal({ benefit, admin, onClose, onUpdate }
             <p className="text-sm font-medium text-gray-900">{benefit.empresa_nome || 'N/A'}</p>
           </div>
 
-          {/* Dates */}
+          {/* Dates - Conditional Display */}
           <div className="border-t border-gray-200 pt-6">
             <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
               <Calendar className="w-5 h-5 mr-2" />
               Datas
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Data do Contrato - SEMPRE */}
               <div>
                 <p className="text-xs text-gray-500">Data do Contrato</p>
                 <p className="text-sm font-medium text-gray-900">
                   {formatDate(benefit.data_contrato_cliente)}
                 </p>
               </div>
-              <div>
-                <p className="text-xs text-gray-500">1º Pagamento do Cliente</p>
-                <p className="text-sm font-medium text-gray-900">
-                  {formatDate(benefit.data_primeiro_pagamento_cliente)}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Expert Pode Enviar NF</p>
-                <p className="text-sm font-medium text-gray-900">
-                  {formatDate(benefit.pode_enviar_nf_a_partir_de)}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Pagamento Previsto</p>
-                <p className="text-sm font-medium text-gray-900">
-                  {formatDate(benefit.data_prevista_pagamento_beneficio)}
-                </p>
-              </div>
+
+              {/* 1º Pagamento Cliente - Apenas se ainda não pagou */}
+              {benefit.status === 'aguardando_pagamento_cliente' && (
+                <div>
+                  <p className="text-xs text-gray-500">Previsão 1º Pagamento do Cliente</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {formatDate(benefit.data_primeiro_pagamento_cliente)}
+                  </p>
+                </div>
+              )}
+
+              {/* Cliente Pagou em - Mostrar quando já pagou */}
               {benefit.cliente_pagou_em && (
                 <div>
                   <p className="text-xs text-gray-500">Cliente Pagou em</p>
                   <p className="text-sm font-medium text-green-700">
                     {formatDate(benefit.cliente_pagou_em)}
+                  </p>
+                </div>
+              )}
+
+              {/* Expert Pode Enviar NF - Apenas se NF ainda não foi enviada/aprovada */}
+              {['liberado_para_nf', 'nf_recusada'].includes(benefit.status) && (
+                <div>
+                  <p className="text-xs text-gray-500">Expert Pode Enviar NF a Partir de</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {formatDate(benefit.pode_enviar_nf_a_partir_de)}
+                  </p>
+                </div>
+              )}
+
+              {/* Pagamento Previsto - Apenas se ainda não foi pago ou agendado */}
+              {['aguardando_pagamento_cliente', 'liberado_para_nf', 'aguardando_conferencia', 'nf_recusada', 'processando_pagamento'].includes(benefit.status) && (
+                <div>
+                  <p className="text-xs text-gray-500">Previsão de Pagamento ao Expert</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {formatDate(benefit.data_prevista_pagamento_beneficio)}
+                  </p>
+                </div>
+              )}
+
+              {/* Pagamento Agendado - Quando status = agendado */}
+              {benefit.status === 'agendado' && (
+                <div>
+                  <p className="text-xs text-gray-500">Pagamento Agendado Para</p>
+                  <p className="text-sm font-medium text-orange-700">
+                    {formatDate(benefit.data_prevista_pagamento_beneficio)}
+                  </p>
+                </div>
+              )}
+
+              {/* Pagamento Realizado - Quando pago */}
+              {benefit.status === 'pago' && benefit.pagamento_data && (
+                <div>
+                  <p className="text-xs text-gray-500">Pago em</p>
+                  <p className="text-sm font-medium text-green-700">
+                    {formatDate(benefit.pagamento_data)}
                   </p>
                 </div>
               )}
@@ -631,24 +779,48 @@ export default function BenefitDetailModal({ benefit, admin, onClose, onUpdate }
               </div>
             )}
 
-            {/* Mark as Paid Button */}
+            {/* Schedule Payment Button */}
             {benefit.status === 'processando_pagamento' && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
                 <div className="flex items-start space-x-3">
-                  <FileText className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <Calendar className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-blue-900 mb-1">
-                      NF Recebida - Pronto para Pagar
+                    <p className="text-sm font-medium text-gray-900 mb-1">
+                      NF Aprovada - Agendar Pagamento
                     </p>
-                    <p className="text-xs text-blue-700">
-                      A nota fiscal foi enviada. Após realizar o pagamento ao expert, marque abaixo.
+                    <p className="text-xs text-gray-700">
+                      A nota fiscal foi aprovada. Agende a data prevista para o pagamento.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowSchedulePaymentModal(true)}
+                  className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+                >
+                  <Calendar className="w-5 h-5" />
+                  <span>Agendar Pagamento</span>
+                </button>
+              </div>
+            )}
+
+            {/* Confirm Payment Button */}
+            {benefit.status === 'agendado' && (
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-start space-x-3">
+                  <FileText className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-orange-900 mb-1">
+                      Pagamento Agendado - Confirmar Pagamento
+                    </p>
+                    <p className="text-xs text-orange-700">
+                      Pagamento agendado para {formatDate(benefit.data_prevista_pagamento_beneficio)}. Após realizar o pagamento ao expert, confirme abaixo.
                     </p>
                   </div>
                 </div>
 
                 {/* Dados do Expert para Pagamento */}
                 {expertData && (
-                  <div className="bg-white border border-blue-200 rounded-lg p-3 space-y-2">
+                  <div className="bg-white border border-orange-200 rounded-lg p-3 space-y-2">
                     <p className="text-xs font-semibold text-gray-700 mb-2">Dados para Pagamento:</p>
                     <div className="space-y-1.5">
                       <div>
@@ -673,23 +845,12 @@ export default function BenefitDetailModal({ benefit, admin, onClose, onUpdate }
                   </div>
                 )}
 
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Data do Pagamento *
-                  </label>
-                  <input
-                    type="date"
-                    value={paymentDate}
-                    onChange={(e) => setPaymentDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  />
-                </div>
                 <button
-                  onClick={() => setShowMarkAsPaidConfirm(true)}
-                  className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+                  onClick={() => setShowConfirmPaymentModal(true)}
+                  className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 >
-                  <DollarSign className="w-5 h-5" />
-                  <span>Marcar como Pago</span>
+                  <CheckCircle className="w-5 h-5" />
+                  <span>Confirmar Pagamento</span>
                 </button>
               </div>
             )}
@@ -803,6 +964,63 @@ export default function BenefitDetailModal({ benefit, admin, onClose, onUpdate }
           </div>
         </div>
       )}
+
+      {/* Modal de Agendar Pagamento */}
+      {showSchedulePaymentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000] p-4">
+          <div className="bg-white rounded-xl max-w-md w-full">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Agendar Pagamento</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-gray-600">
+                Informe a data prevista para realizar o pagamento ao expert.
+              </p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Data Prevista de Pagamento
+                </label>
+                <input
+                  type="date"
+                  value={scheduledDate}
+                  onChange={(e) => setScheduledDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowSchedulePaymentModal(false);
+                  setScheduledDate('');
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSchedulePayment}
+                className="px-4 py-2 text-sm font-medium text-white bg-orange-600 rounded-lg hover:bg-orange-700"
+              >
+                Confirmar Agendamento
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmar Pagamento */}
+      <ConfirmationModal
+        isOpen={showConfirmPaymentModal}
+        onClose={() => setShowConfirmPaymentModal(false)}
+        onConfirm={handleConfirmPayment}
+        title="Confirmar Pagamento"
+        message={`Confirma que o pagamento de ${formatCurrency(benefit.valor_beneficio || 0)} foi realizado ao expert?`}
+        type="success"
+        confirmText="Confirmar Pagamento"
+        cancelText="Cancelar"
+      />
 
       <AlertModal
         isOpen={showAlert}

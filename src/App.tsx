@@ -127,7 +127,7 @@ function AuthenticatedApp({ expert, onLogout, onUpdate }: { expert: ExpertUser; 
       .from('experts_benefits')
       .select('*')
       .eq('expert_id', expert.id)
-      .eq('pagamento_realizado', true);
+      .eq('status', 'pago');
 
     setTotalIndicacoes(indications?.length || 0);
     setTotalBeneficios(allBenefits?.reduce((sum, b) => sum + (b.valor_beneficio || 0), 0) || 0);

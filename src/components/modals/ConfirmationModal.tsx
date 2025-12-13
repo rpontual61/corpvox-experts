@@ -54,7 +54,7 @@ export default function ConfirmationModal({
   };
 
   const modalContent = (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[100000]">
       <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
         {/* Content */}
         <div className="p-6 text-center">

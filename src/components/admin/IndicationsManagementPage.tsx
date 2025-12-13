@@ -117,6 +117,19 @@ export default function IndicationsManagementPage({ admin }: IndicationsManageme
         updateData.validada_por = admin.id;
       }
 
+      // Sincronizar crm_status com status
+      if (newStatus === 'perdido') {
+        updateData.crm_status = 'perdido';
+      } else if (newStatus === 'contratou') {
+        updateData.crm_status = 'contrato_assinado';
+      } else if (newStatus === 'em_contato') {
+        // Quando volta para em_contato, limpa o crm_status para ir pro início do pipeline
+        updateData.crm_status = null;
+      } else {
+        // Para outros status (validacao_pendente, validacao_recusada, etc), limpa o crm_status
+        updateData.crm_status = null;
+      }
+
       const { error } = await supabase
         .from('experts_indications')
         .update(updateData)
@@ -305,7 +318,11 @@ export default function IndicationsManagementPage({ admin }: IndicationsManageme
                   </tr>
                 ) : (
                   pendingIndications.map((indication) => (
-                    <tr key={indication.id} className="hover:bg-gray-50">
+                    <tr
+                      key={indication.id}
+                      onClick={() => handleViewDetails(indication)}
+                      className="hover:bg-gray-50 cursor-pointer transition-colors"
+                    >
                       <td className="px-6 py-4">
                         <div>
                           <p className="text-sm font-medium text-gray-900">
@@ -330,7 +347,7 @@ export default function IndicationsManagementPage({ admin }: IndicationsManageme
                           {getIndicationStatusDisplay(indication.status)}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right text-sm font-medium">
+                      <td className="px-6 py-4 text-right text-sm font-medium" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => handleViewDetails(indication)}
                           className="text-purple-600 hover:text-purple-900"
@@ -403,7 +420,11 @@ export default function IndicationsManagementPage({ admin }: IndicationsManageme
                   </tr>
                 ) : (
                   processedIndications.map((indication) => (
-                    <tr key={indication.id} className="hover:bg-gray-50">
+                    <tr
+                      key={indication.id}
+                      onClick={() => handleViewDetails(indication)}
+                      className="hover:bg-gray-50 cursor-pointer transition-colors"
+                    >
                       <td className="px-6 py-4">
                         <div>
                           <p className="text-sm font-medium text-gray-900">
@@ -428,7 +449,7 @@ export default function IndicationsManagementPage({ admin }: IndicationsManageme
                           {getIndicationStatusDisplay(indication.status)}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right text-sm font-medium">
+                      <td className="px-6 py-4 text-right text-sm font-medium" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => handleViewDetails(indication)}
                           className="text-purple-600 hover:text-purple-900"
@@ -566,13 +587,29 @@ function IndicationDetailModal({ indication, admin, onClose, onUpdateStatus }: I
 
   const confirmUpdateStatus = async () => {
     try {
+      // Prepare update data with crm_status synchronization
+      const updateData: any = {
+        status: newStatus,
+        atualizado_em: new Date().toISOString()
+      };
+
+      // Sincronizar crm_status com status
+      if (newStatus === 'perdido') {
+        updateData.crm_status = 'perdido';
+      } else if (newStatus === 'contratou') {
+        updateData.crm_status = 'contrato_assinado';
+      } else if (newStatus === 'em_contato') {
+        // Quando volta para em_contato, limpa o crm_status para ir pro início do pipeline
+        updateData.crm_status = null;
+      } else {
+        // Para outros status (validacao_pendente, validacao_recusada, etc), limpa o crm_status
+        updateData.crm_status = null;
+      }
+
       // Update indication status
       const { error: indicationError } = await supabase
         .from('experts_indications')
-        .update({
-          status: newStatus,
-          atualizado_em: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', indication.id);
 
       if (indicationError) throw indicationError;

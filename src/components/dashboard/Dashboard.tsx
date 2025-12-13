@@ -733,7 +733,9 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
                         : benefit.status === 'nf_recusada'
                         ? 'Nota fiscal recusada. Faça o reenvio.'
                         : benefit.status === 'processando_pagamento'
-                        ? `Pagamento previsto para ${formatDate(benefit.data_prevista_pagamento_beneficio)}`
+                        ? `Nota fiscal aprovada. Previsão de pagamento em ${formatDate(benefit.data_prevista_pagamento_beneficio)}`
+                        : benefit.status === 'agendado'
+                        ? `Pagamento agendado para ${formatDate(benefit.data_prevista_pagamento_beneficio)}`
                         : benefit.status === 'pago'
                         ? `Pago em ${formatDate(benefit.pagamento_data)}`
                         : formatDate(benefit.criado_em)}
@@ -744,7 +746,7 @@ export default function Dashboard({ expert, onNavigate }: DashboardProps) {
                       {formatCurrency(benefit.valor_beneficio || 0)}
                     </p>
                     <p className="text-xs text-text-muted mt-1">
-                      {benefit.status === 'pago' ? 'Pago' : benefit.status === 'processando_pagamento' ? 'Pagamento agendado' : benefit.status === 'aguardando_conferencia' ? 'Conferindo Nota Fiscal' : benefit.status === 'nf_enviada' ? 'Processando pagamento' : benefit.status === 'liberado_para_nf' ? 'Emita sua nota fiscal' : 'Aguardando pagamento cliente'}
+                      {benefit.status === 'pago' ? 'Pago' : benefit.status === 'agendado' ? `Pagamento agendado para ${formatDate(benefit.data_prevista_pagamento_beneficio)}` : benefit.status === 'processando_pagamento' ? 'Processando pagamento' : benefit.status === 'aguardando_conferencia' ? 'Conferindo Nota Fiscal' : benefit.status === 'nf_enviada' ? 'Processando pagamento' : benefit.status === 'liberado_para_nf' ? 'Emita sua nota fiscal' : 'Aguardando pagamento cliente'}
                     </p>
                   </div>
                   {benefit.status === 'liberado_para_nf' && !benefit.nf_enviada && (

@@ -280,7 +280,14 @@ export default function ExpertsManagementPage({ admin }: ExpertsManagementPagePr
                 </tr>
               ) : (
                 pendingExperts.map((expert) => (
-                  <tr key={expert.id} className="hover:bg-gray-50">
+                  <tr
+                    key={expert.id}
+                    onClick={() => {
+                      setSelectedExpert(expert);
+                      setShowModal(true);
+                    }}
+                    className="hover:bg-gray-50 cursor-pointer transition-colors"
+                  >
                     <td className="px-6 py-4">
                       <div>
                         <p className="text-sm font-medium text-gray-900">{expert.nome}</p>
@@ -318,7 +325,7 @@ export default function ExpertsManagementPage({ admin }: ExpertsManagementPagePr
                         currency: 'BRL',
                       }).format(expert.total_benefits)}
                     </td>
-                    <td className="px-6 py-4 text-right text-sm font-medium">
+                    <td className="px-6 py-4 text-right text-sm font-medium" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => {
                           setSelectedExpert(expert);
@@ -398,7 +405,14 @@ export default function ExpertsManagementPage({ admin }: ExpertsManagementPagePr
                 </tr>
               ) : (
                 processedExperts.map((expert) => (
-                  <tr key={expert.id} className="hover:bg-gray-50">
+                  <tr
+                    key={expert.id}
+                    onClick={() => {
+                      setSelectedExpert(expert);
+                      setShowModal(true);
+                    }}
+                    className="hover:bg-gray-50 cursor-pointer transition-colors"
+                  >
                     <td className="px-6 py-4">
                       <div>
                         <p className="text-sm font-medium text-gray-900">{expert.nome}</p>
@@ -436,7 +450,7 @@ export default function ExpertsManagementPage({ admin }: ExpertsManagementPagePr
                         currency: 'BRL',
                       }).format(expert.total_benefits)}
                     </td>
-                    <td className="px-6 py-4 text-right text-sm font-medium">
+                    <td className="px-6 py-4 text-right text-sm font-medium" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => {
                           setSelectedExpert(expert);

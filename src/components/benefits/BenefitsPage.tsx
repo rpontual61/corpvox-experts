@@ -25,6 +25,7 @@ export default function BenefitsPage({ expert }: BenefitsPageProps) {
     aguardando_conferencia: 0,
     nf_recusada: 0,
     processando_pagamento: 0,
+    agendado: 0,
     nf_enviada: 0,
     pago_count: 0,
   });
@@ -61,10 +62,11 @@ export default function BenefitsPage({ expert }: BenefitsPageProps) {
       const aguardando_conferencia = benefitsData.filter(b => b.status === 'aguardando_conferencia').reduce((sum, b) => sum + (b.valor_beneficio || 0), 0);
       const nf_recusada = benefitsData.filter(b => b.status === 'nf_recusada').reduce((sum, b) => sum + (b.valor_beneficio || 0), 0);
       const processando_pagamento = benefitsData.filter(b => b.status === 'processando_pagamento').reduce((sum, b) => sum + (b.valor_beneficio || 0), 0);
+      const agendado = benefitsData.filter(b => b.status === 'agendado').reduce((sum, b) => sum + (b.valor_beneficio || 0), 0);
       const nf_enviada = benefitsData.filter(b => b.status === 'nf_enviada').reduce((sum, b) => sum + (b.valor_beneficio || 0), 0);
       const pago_count = benefitsData.filter(b => b.status === 'pago').length;
 
-      setStats({ total, pago, aguardando_pagamento_cliente, liberado_para_nf, aguardando_conferencia, nf_recusada, processando_pagamento, nf_enviada, pago_count });
+      setStats({ total, pago, aguardando_pagamento_cliente, liberado_para_nf, aguardando_conferencia, nf_recusada, processando_pagamento, agendado, nf_enviada, pago_count });
       setLoading(false);
     } catch (error) {
       console.error('Error loading benefits:', error);
@@ -94,21 +96,31 @@ export default function BenefitsPage({ expert }: BenefitsPageProps) {
 
       {/* Stats Cards - Row 1: Totals */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-        <div className="bg-gradient-to-br from-primary-600 to-primary-700 rounded-xl shadow-sm p-6 text-white">
+        <button
+          onClick={() => setStatusFilter('all')}
+          className={`bg-gradient-to-br from-primary-600 to-primary-700 rounded-xl shadow-sm p-6 text-white text-left transition-all hover:shadow-lg ${
+            statusFilter === 'all' ? 'ring-4 ring-primary-300' : ''
+          }`}
+        >
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
               <DollarSign className="w-5 h-5" />
             </div>
             <p className="text-sm font-medium opacity-90">
-              Total de Benefícios
+              Benefícios gerados
             </p>
           </div>
           <p className="text-3xl font-bold">
             {formatCurrency(stats.total)}
           </p>
-        </div>
+        </button>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <button
+          onClick={() => setStatusFilter(statusFilter === 'pago' ? 'all' : 'pago')}
+          className={`bg-white rounded-xl shadow-sm border p-6 text-left transition-all hover:shadow-md ${
+            statusFilter === 'pago' ? 'border-green-500 ring-2 ring-green-200' : 'border-gray-200'
+          }`}
+        >
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
               <CheckCircle2 className="w-5 h-5 text-green-600" />
@@ -120,55 +132,94 @@ export default function BenefitsPage({ expert }: BenefitsPageProps) {
           <p className="text-2xl font-bold text-green-600">
             {formatCurrency(stats.pago)}
           </p>
-        </div>
+        </button>
       </div>
 
       {/* Stats Cards - Row 2: Status */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+        <button
+          onClick={() => setStatusFilter(statusFilter === 'aguardando_pagamento_cliente' ? 'all' : 'aguardando_pagamento_cliente')}
+          className={`bg-white rounded-xl shadow-sm border p-4 text-left transition-all hover:shadow-md ${
+            statusFilter === 'aguardando_pagamento_cliente' ? 'border-primary-500 ring-2 ring-primary-200' : 'border-gray-200'
+          }`}
+        >
           <p className="text-xs font-medium text-text-primary mb-2">
             Aguardando pagamento cliente
           </p>
           <p className="text-lg font-bold text-text-primary">
             {formatCurrency(stats.aguardando_pagamento_cliente)}
           </p>
-        </div>
+        </button>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <button
+          onClick={() => setStatusFilter(statusFilter === 'liberado_para_nf' ? 'all' : 'liberado_para_nf')}
+          className={`bg-white rounded-xl shadow-sm border p-4 text-left transition-all hover:shadow-md ${
+            statusFilter === 'liberado_para_nf' ? 'border-primary-500 ring-2 ring-primary-200' : 'border-gray-200'
+          }`}
+        >
           <p className="text-xs font-medium text-text-primary mb-2">
             Liberada emissão de Nota Fiscal
           </p>
           <p className="text-lg font-bold text-text-primary">
             {formatCurrency(stats.liberado_para_nf)}
           </p>
-        </div>
+        </button>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <button
+          onClick={() => setStatusFilter(statusFilter === 'aguardando_conferencia' ? 'all' : 'aguardando_conferencia')}
+          className={`bg-white rounded-xl shadow-sm border p-4 text-left transition-all hover:shadow-md ${
+            statusFilter === 'aguardando_conferencia' ? 'border-primary-500 ring-2 ring-primary-200' : 'border-gray-200'
+          }`}
+        >
           <p className="text-xs font-medium text-text-primary mb-2">
             Notas em conferência
           </p>
           <p className="text-lg font-bold text-text-primary">
             {formatCurrency(stats.aguardando_conferencia)}
           </p>
-        </div>
+        </button>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <button
+          onClick={() => setStatusFilter(statusFilter === 'nf_recusada' ? 'all' : 'nf_recusada')}
+          className={`bg-white rounded-xl shadow-sm border p-4 text-left transition-all hover:shadow-md ${
+            statusFilter === 'nf_recusada' ? 'border-primary-500 ring-2 ring-primary-200' : 'border-gray-200'
+          }`}
+        >
           <p className="text-xs font-medium text-text-primary mb-2">
             Notas recusadas
           </p>
           <p className="text-lg font-bold text-text-primary">
             {formatCurrency(stats.nf_recusada)}
           </p>
-        </div>
+        </button>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <button
+          onClick={() => setStatusFilter(statusFilter === 'processando_pagamento' ? 'all' : 'processando_pagamento')}
+          className={`bg-white rounded-xl shadow-sm border p-4 text-left transition-all hover:shadow-md ${
+            statusFilter === 'processando_pagamento' ? 'border-primary-500 ring-2 ring-primary-200' : 'border-gray-200'
+          }`}
+        >
           <p className="text-xs font-medium text-text-primary mb-2">
-            Pagamento agendado
+            Processando pagamento
           </p>
           <p className="text-lg font-bold text-text-primary">
             {formatCurrency(stats.processando_pagamento)}
           </p>
-        </div>
+        </button>
+
+        <button
+          onClick={() => setStatusFilter(statusFilter === 'agendado' ? 'all' : 'agendado')}
+          className={`bg-white rounded-xl shadow-sm border p-4 text-left transition-all hover:shadow-md ${
+            statusFilter === 'agendado' ? 'border-primary-500 ring-2 ring-primary-200' : 'border-gray-200'
+          }`}
+        >
+          <p className="text-xs font-medium text-text-primary mb-2">
+            Pagamentos agendados
+          </p>
+          <p className="text-lg font-bold text-text-primary">
+            {formatCurrency(stats.agendado)}
+          </p>
+        </button>
       </div>
 
       {/* Divider */}
@@ -209,7 +260,8 @@ export default function BenefitsPage({ expert }: BenefitsPageProps) {
               <option value="liberado_para_nf">Liberada emissão de Nota Fiscal</option>
               <option value="aguardando_conferencia">Conferindo Nota Fiscal</option>
               <option value="nf_recusada">Notas recusadas</option>
-              <option value="processando_pagamento">Pagamento agendado</option>
+              <option value="processando_pagamento">Processando pagamento</option>
+              <option value="agendado">Pagamento Agendado</option>
               <option value="pago">Pago</option>
             </select>
           </div>
@@ -327,9 +379,13 @@ function BenefitCard({
             <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-medium">
               Pago
             </span>
+          ) : benefit.status === 'agendado' ? (
+            <span className="px-2.5 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium">
+              Pagamento Agendado
+            </span>
           ) : benefit.status === 'processando_pagamento' ? (
-            <span className="px-2.5 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
-              Pagamento agendado
+            <span className="px-2.5 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">
+              Processando pagamento
             </span>
           ) : benefit.status === 'aguardando_conferencia' ? (
             <span className="px-2.5 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
@@ -371,19 +427,23 @@ function BenefitCard({
           </p>
         ) : benefit.status === 'aguardando_conferencia' ? (
           <p className="text-sm text-text-muted">
-            Nota fiscal em conferência. Aguarde a validação.
+            Nota enviada em {formatDate(benefit.nf_enviada_em)}. Estamos conferindo os dados.
+          </p>
+        ) : benefit.status === 'nf_recusada' ? (
+          <p className="text-sm text-text-muted">
+            Nota fiscal recusada. Faça o reenvio.
           </p>
         ) : benefit.status === 'processando_pagamento' ? (
           <p className="text-sm text-text-muted">
-            Nota fiscal aprovada! Pagamento previsto: {formatDate(benefit.data_prevista_pagamento_beneficio)}
+            Nota fiscal aprovada. Previsão de pagamento em {formatDate(benefit.data_prevista_pagamento_beneficio)}
           </p>
-        ) : benefit.status === 'nf_enviada' ? (
+        ) : benefit.status === 'agendado' ? (
           <p className="text-sm text-text-muted">
-            Nota fiscal enviada. Pagamento previsto: {formatDate(benefit.data_prevista_pagamento_beneficio)}
+            Pagamento agendado para {formatDate(benefit.data_prevista_pagamento_beneficio)}
           </p>
         ) : benefit.status === 'pago' ? (
           <p className="text-sm text-text-muted">
-            Benefício pago em: {formatDate(benefit.pagamento_data || benefit.data_contrato_cliente)}
+            Pago em {formatDate(benefit.pagamento_data)}
           </p>
         ) : (
           <p className="text-sm text-text-muted">
@@ -433,6 +493,7 @@ function BenefitCard({
         {isExpanded && (
           <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
             <div className="space-y-3">
+              {/* Data do Contrato - SEMPRE */}
               <div className="flex items-start space-x-3">
                 <Calendar className="w-5 h-5 text-text-muted flex-shrink-0 mt-0.5" />
                 <div>
@@ -443,25 +504,57 @@ function BenefitCard({
                 </div>
               </div>
 
-              <div className="flex items-start space-x-3">
-                <Calendar className="w-5 h-5 text-text-muted flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs text-text-muted">Previsão de liberação para envio de NF a partir de</p>
-                  <p className="text-sm text-text-primary font-medium">
-                    {formatDate(benefit.pode_enviar_nf_a_partir_de)}
-                  </p>
+              {/* Cliente Pagou em - Mostrar quando já pagou */}
+              {benefit.cliente_pagou_em && (
+                <div className="flex items-start space-x-3">
+                  <Calendar className="w-5 h-5 text-text-muted flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-text-muted">Cliente Pagou em</p>
+                    <p className="text-sm text-green-700 font-medium">
+                      {formatDate(benefit.cliente_pagou_em)}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="flex items-start space-x-3">
-                <Calendar className="w-5 h-5 text-text-muted flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs text-text-muted">Pagamento Previsto</p>
-                  <p className="text-sm text-text-primary font-medium">
-                    {formatDate(benefit.data_prevista_pagamento_beneficio)}
-                  </p>
+              {/* Previsão de liberação para envio de NF - Apenas se NF ainda não foi enviada/aprovada */}
+              {['liberado_para_nf', 'nf_recusada'].includes(benefit.status) && (
+                <div className="flex items-start space-x-3">
+                  <Calendar className="w-5 h-5 text-text-muted flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-text-muted">Você pode enviar NF a partir de</p>
+                    <p className="text-sm text-text-primary font-medium">
+                      {formatDate(benefit.pode_enviar_nf_a_partir_de)}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Pagamento Previsto - Apenas se ainda não foi pago ou agendado */}
+              {['aguardando_pagamento_cliente', 'liberado_para_nf', 'aguardando_conferencia', 'nf_recusada', 'processando_pagamento'].includes(benefit.status) && (
+                <div className="flex items-start space-x-3">
+                  <Calendar className="w-5 h-5 text-text-muted flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-text-muted">Previsão de Pagamento</p>
+                    <p className="text-sm text-text-primary font-medium">
+                      {formatDate(benefit.data_prevista_pagamento_beneficio)}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Pagamento Agendado - Quando status = agendado */}
+              {benefit.status === 'agendado' && (
+                <div className="flex items-start space-x-3">
+                  <Calendar className="w-5 h-5 text-text-muted flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-text-muted">Pagamento Agendado Para</p>
+                    <p className="text-sm text-orange-700 font-medium">
+                      {formatDate(benefit.data_prevista_pagamento_beneficio)}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {benefit.nf_enviada && (
@@ -474,8 +567,8 @@ function BenefitCard({
                         Nota Fiscal Enviada
                       </p>
                     </div>
-                    {/* Botão Substituir NF - só aparece se ainda não foi pago */}
-                    {!benefit.pagamento_realizado && (
+                    {/* Botão Substituir NF - só aparece se NF ainda não foi aprovada */}
+                    {['aguardando_conferencia', 'nf_recusada'].includes(benefit.status) && (
                       <button
                         onClick={() => setShowReplaceModal(true)}
                         className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer transition-colors"
@@ -564,12 +657,6 @@ function BenefitCard({
                         const [year, month] = dateStr.split('-');
                         return formatDate(`${year}-${month}-10`);
                       })()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-primary-700">Previsão de Pagamento:</span>
-                    <span className="text-base font-semibold text-primary-900">
-                      {formatDate(benefit.data_prevista_pagamento_beneficio)}
                     </span>
                   </div>
                 </div>

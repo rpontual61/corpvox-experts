@@ -229,7 +229,7 @@ export default function DashboardLayout({ children, expert, currentPage, onNavig
                 </div>
                 <div className="h-10 w-px bg-gray-300"></div>
                 <div className="text-right">
-                  <p className="text-xs text-text-muted">Total de Benefícios</p>
+                  <p className="text-xs text-text-muted">Benefícios gerados</p>
                   <p className="text-sm font-semibold text-primary-600">{formatCurrency(totalBeneficios)}</p>
                 </div>
                 <div className="h-10 w-px bg-gray-300"></div>

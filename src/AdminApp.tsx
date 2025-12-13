@@ -73,7 +73,7 @@ function AdminApp() {
       )}
 
       {currentPage === 'pagamentos' && (
-        <PaymentsPage />
+        <PaymentsPage admin={admin} />
       )}
 
       {currentPage === 'experts' && (

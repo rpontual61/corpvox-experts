@@ -94,59 +94,89 @@ export default function IndicationsPage({ expert, onNavigate, initialMode = 'lis
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <button
+          onClick={() => setStatusFilter('all')}
+          className={`bg-white rounded-xl shadow-sm border p-4 text-left transition-all hover:shadow-md ${
+            statusFilter === 'all' ? 'border-primary-500 ring-2 ring-primary-200' : 'border-gray-200'
+          }`}
+        >
           <p className="text-xs font-medium text-text-primary mb-2">
             Total de Indicações
           </p>
           <p className="text-lg font-bold text-text-primary">
             {indications.length}
           </p>
-        </div>
+        </button>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <button
+          onClick={() => setStatusFilter(statusFilter === 'aguardando_validacao' ? 'all' : 'aguardando_validacao')}
+          className={`bg-white rounded-xl shadow-sm border p-4 text-left transition-all hover:shadow-md ${
+            statusFilter === 'aguardando_validacao' ? 'border-primary-500 ring-2 ring-primary-200' : 'border-gray-200'
+          }`}
+        >
           <p className="text-xs font-medium text-text-primary mb-2">
             Aguardando Validação
           </p>
           <p className="text-lg font-bold text-text-primary">
             {indications.filter(i => i.status === 'aguardando_validacao').length}
           </p>
-        </div>
+        </button>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <button
+          onClick={() => setStatusFilter(statusFilter === 'validacao_recusada' ? 'all' : 'validacao_recusada')}
+          className={`bg-white rounded-xl shadow-sm border p-4 text-left transition-all hover:shadow-md ${
+            statusFilter === 'validacao_recusada' ? 'border-primary-500 ring-2 ring-primary-200' : 'border-gray-200'
+          }`}
+        >
           <p className="text-xs font-medium text-text-primary mb-2">
             Invalidadas
           </p>
           <p className="text-lg font-bold text-text-primary">
             {indications.filter(i => i.status === 'validacao_recusada').length}
           </p>
-        </div>
+        </button>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <button
+          onClick={() => setStatusFilter(statusFilter === 'em_contato' ? 'all' : 'em_contato')}
+          className={`bg-white rounded-xl shadow-sm border p-4 text-left transition-all hover:shadow-md ${
+            statusFilter === 'em_contato' ? 'border-primary-500 ring-2 ring-primary-200' : 'border-gray-200'
+          }`}
+        >
           <p className="text-xs font-medium text-text-primary mb-2">
             Em Contato
           </p>
           <p className="text-lg font-bold text-text-primary">
             {indications.filter(i => i.status === 'em_contato').length}
           </p>
-        </div>
+        </button>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <button
+          onClick={() => setStatusFilter(statusFilter === 'contratou' ? 'all' : 'contratou')}
+          className={`bg-white rounded-xl shadow-sm border p-4 text-left transition-all hover:shadow-md ${
+            statusFilter === 'contratou' ? 'border-primary-500 ring-2 ring-primary-200' : 'border-gray-200'
+          }`}
+        >
           <p className="text-xs font-medium text-text-primary mb-2">
             Contratou!
           </p>
           <p className="text-lg font-bold text-text-primary">
             {indications.filter(i => i.status === 'contratou').length}
           </p>
-        </div>
+        </button>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <button
+          onClick={() => setStatusFilter(statusFilter === 'perdido' ? 'all' : 'perdido')}
+          className={`bg-white rounded-xl shadow-sm border p-4 text-left transition-all hover:shadow-md ${
+            statusFilter === 'perdido' ? 'border-primary-500 ring-2 ring-primary-200' : 'border-gray-200'
+          }`}
+        >
           <p className="text-xs font-medium text-text-primary mb-2">
             Não contratou
           </p>
           <p className="text-lg font-bold text-text-primary">
             {indications.filter(i => i.status === 'perdido').length}
           </p>
-        </div>
+        </button>
       </div>
 
       {/* Setup Tasks - only shown if user needs to complete setup */}

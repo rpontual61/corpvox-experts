@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Plus, Search, Filter, Calendar, Building2, User, Phone, Mail, X, AlertCircle, CheckCircle2, ArrowRight, GraduationCap, CreditCard } from 'lucide-react';
 import { ExpertUser, ExpertIndication } from '../../types/database.types';
 import { supabase, formatDate, formatCNPJ, formatCurrency, validateCNPJ, getIndicationStatusColor, getIndicationStatusDisplay, canCreateIndications, getClientIP } from '../../lib/supabase';
@@ -8,11 +8,12 @@ interface IndicationsPageProps {
   expert: ExpertUser;
   onNavigate?: (page: string) => void;
   initialMode?: 'list' | 'new';
+  onUpdate?: () => void;
 }
 
 type ViewMode = 'list' | 'new';
 
-export default function IndicationsPage({ expert, onNavigate, initialMode = 'list' }: IndicationsPageProps) {
+export default function IndicationsPage({ expert, onNavigate, initialMode = 'list', onUpdate }: IndicationsPageProps) {
   const [viewMode, setViewMode] = useState<ViewMode>(initialMode);
   const [indications, setIndications] = useState<ExpertIndication[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,7 +68,7 @@ export default function IndicationsPage({ expert, onNavigate, initialMode = 'lis
   }
 
   if (viewMode === 'new') {
-    return <NewIndicationForm expert={expert} onBack={() => { setViewMode('list'); loadIndications(); }} />;
+    return <NewIndicationForm expert={expert} onBack={() => { setViewMode('list'); loadIndications(); onUpdate?.(); }} />;
   }
 
   return (
@@ -476,6 +477,7 @@ function IndicationCard({ indication, onNavigate }: { indication: ExpertIndicati
 
 // New Indication Form Component
 function NewIndicationForm({ expert, onBack }: { expert: ExpertUser; onBack: () => void }) {
+  const formRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
     empresa_nome: '',
     empresa_cnpj: '',
@@ -567,6 +569,8 @@ function NewIndicationForm({ expert, onBack }: { expert: ExpertUser; onBack: () 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       setLoading(false);
+      // Scroll to top to show errors
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
 
@@ -628,7 +632,7 @@ function NewIndicationForm({ expert, onBack }: { expert: ExpertUser; onBack: () 
   }
 
   return (
-    <div className="space-y-6">
+    <div ref={formRef} className="space-y-6">
       {/* Header */}
       <div>
         <button
@@ -661,7 +665,9 @@ function NewIndicationForm({ expert, onBack }: { expert: ExpertUser; onBack: () 
                 type="text"
                 value={formData.empresa_nome}
                 onChange={(e) => setFormData({ ...formData, empresa_nome: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
+                  errors.empresa_nome ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                }`}
                 placeholder="Empresa XYZ Ltda"
               />
               {errors.empresa_nome && (
@@ -677,7 +683,9 @@ function NewIndicationForm({ expert, onBack }: { expert: ExpertUser; onBack: () 
                 type="text"
                 value={formData.empresa_cnpj}
                 onChange={handleCNPJChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
+                  errors.empresa_cnpj ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                }`}
                 placeholder="00.000.000/0000-00"
                 maxLength={18}
               />
@@ -694,7 +702,9 @@ function NewIndicationForm({ expert, onBack }: { expert: ExpertUser; onBack: () 
                 type="number"
                 value={formData.quantidade_funcionarios}
                 onChange={(e) => setFormData({ ...formData, quantidade_funcionarios: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
+                  errors.quantidade_funcionarios ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                }`}
                 placeholder="50"
                 min="1"
               />
@@ -719,7 +729,9 @@ function NewIndicationForm({ expert, onBack }: { expert: ExpertUser; onBack: () 
                 type="text"
                 value={formData.contato_nome}
                 onChange={(e) => setFormData({ ...formData, contato_nome: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
+                  errors.contato_nome ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                }`}
                 placeholder="João Silva"
               />
               {errors.contato_nome && (
@@ -736,7 +748,9 @@ function NewIndicationForm({ expert, onBack }: { expert: ExpertUser; onBack: () 
                   type="email"
                   value={formData.contato_email}
                   onChange={(e) => setFormData({ ...formData, contato_email: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
+                    errors.contato_email ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="joao@empresa.com"
                 />
                 {errors.contato_email && (
@@ -774,7 +788,9 @@ function NewIndicationForm({ expert, onBack }: { expert: ExpertUser; onBack: () 
               <select
                 value={formData.tipo_indicacao}
                 onChange={(e) => setFormData({ ...formData, tipo_indicacao: e.target.value as any })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
+                  errors.tipo_indicacao ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                }`}
               >
                 <option value="">Selecione</option>
                 <option value="relatorio_tecnico">Relatório Técnico</option>
@@ -806,13 +822,17 @@ function NewIndicationForm({ expert, onBack }: { expert: ExpertUser; onBack: () 
           <h3 className="text-lg font-semibold text-text-primary mb-6">
             Declaração
           </h3>
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className={`bg-yellow-50 border rounded-lg p-4 ${
+            errors.declaracao ? 'border-red-500' : 'border-yellow-200'
+          }`}>
             <label className="flex items-start space-x-3 cursor-pointer">
               <input
                 type="checkbox"
                 checked={declaracaoAceita}
                 onChange={(e) => setDeclaracaoAceita(e.target.checked)}
-                className="mt-1 w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                className={`mt-1 w-4 h-4 text-primary-600 rounded focus:ring-primary-500 ${
+                  errors.declaracao ? 'border-red-500' : 'border-gray-300'
+                }`}
               />
               <span className="text-sm text-gray-700">
                 Declaro que realizei a indicação desta empresa e que ela está sob minha responsabilidade técnica.

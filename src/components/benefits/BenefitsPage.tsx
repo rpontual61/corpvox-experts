@@ -6,13 +6,14 @@ import LoadingSpinner from '../LoadingSpinner';
 
 interface BenefitsPageProps {
   expert: ExpertUser;
+  onUpdate?: () => void;
 }
 
 interface BenefitWithIndication extends ExpertBenefit {
   indication?: ExpertIndication;
 }
 
-export default function BenefitsPage({ expert }: BenefitsPageProps) {
+export default function BenefitsPage({ expert, onUpdate }: BenefitsPageProps) {
   const [benefits, setBenefits] = useState<BenefitWithIndication[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -297,7 +298,7 @@ export default function BenefitsPage({ expert }: BenefitsPageProps) {
                 key={benefit.id}
                 benefit={benefit}
                 expert={expert}
-                onUpdate={loadBenefits}
+                onUpdate={() => { loadBenefits(); onUpdate?.(); }}
               />
             ))}
         </div>
@@ -321,11 +322,20 @@ function BenefitCard({
   const [uploadError, setUploadError] = useState('');
   const [showNFModal, setShowNFModal] = useState(false);
   const [showReplaceModal, setShowReplaceModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const canSendNF = benefit.status === 'liberado_para_nf' && !benefit.nf_enviada;
   const nfRejected = benefit.status === 'nf_recusada';
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, isReplacement: boolean = false) => {
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -333,14 +343,23 @@ function BenefitCard({
     const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
       setUploadError('Arquivo muito grande. Máximo 10MB.');
+      setSelectedFile(null);
       return;
     }
 
     const allowedTypes = ['application/pdf', 'text/xml', 'application/xml'];
     if (!allowedTypes.includes(file.type)) {
       setUploadError('Formato inválido. Use PDF ou XML.');
+      setSelectedFile(null);
       return;
     }
+
+    setUploadError('');
+    setSelectedFile(file);
+  };
+
+  const handleUploadSubmit = async (isReplacement: boolean = false) => {
+    if (!selectedFile) return;
 
     setUploading(true);
     setUploadError('');
@@ -352,7 +371,7 @@ function BenefitCard({
         benefit.id,
         benefit.indication_id,
         benefit.valor_beneficio,
-        file,
+        selectedFile,
         isReplacement
       );
 
@@ -360,6 +379,7 @@ function BenefitCard({
       setShowNFModal(false);
       setShowReplaceModal(false);
       setUploading(false);
+      setSelectedFile(null);
       onUpdate();
     } catch (error) {
       console.error('Error uploading NF:', error);
@@ -733,41 +753,100 @@ function BenefitCard({
               {/* Upload Section */}
               <div>
                 <h4 className="font-semibold text-text-primary mb-3">Enviar Nota Fiscal</h4>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <input
-                    type="file"
-                    id={`nf-upload-${benefit.id}`}
-                    accept=".pdf,.xml"
-                    onChange={handleFileUpload}
-                    disabled={uploading}
-                    className="hidden"
-                  />
-                  <label
-                    htmlFor={`nf-upload-${benefit.id}`}
-                    className="cursor-pointer inline-flex flex-col items-center"
-                  >
-                    <svg className="w-12 h-12 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
-                    <span className="text-sm font-medium text-text-primary">
-                      {uploading ? 'Enviando...' : 'Clique para selecionar o arquivo'}
-                    </span>
-                    <span className="text-xs text-text-muted mt-1">
-                      PDF ou XML (máx. 10MB)
-                    </span>
-                  </label>
-                </div>
+
+                {!selectedFile ? (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-500 transition-colors">
+                    <input
+                      type="file"
+                      id={`nf-upload-${benefit.id}`}
+                      accept=".pdf,.xml"
+                      onChange={handleFileSelect}
+                      disabled={uploading}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor={`nf-upload-${benefit.id}`}
+                      className="cursor-pointer inline-flex flex-col items-center"
+                    >
+                      <svg className="w-12 h-12 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <span className="text-sm font-medium text-text-primary">
+                        Clique para selecionar o arquivo
+                      </span>
+                      <span className="text-xs text-text-muted mt-1">
+                        PDF ou XML (máx. 10MB)
+                      </span>
+                    </label>
+                  </div>
+                ) : (
+                  <div className="border-2 border-primary-300 bg-primary-50 rounded-lg p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start space-x-3 flex-1">
+                        <svg className="w-10 h-10 text-primary-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-text-primary truncate">
+                            {selectedFile.name}
+                          </p>
+                          <p className="text-xs text-text-muted mt-1">
+                            {formatFileSize(selectedFile.size)}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setSelectedFile(null)}
+                        disabled={uploading}
+                        className="ml-3 text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50"
+                        title="Remover arquivo"
+                      >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {uploadError && (
+                  <p className="mt-2 text-sm text-red-600">{uploadError}</p>
+                )}
               </div>
             </div>
 
             {/* Modal Footer */}
             <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end space-x-3 rounded-b-xl">
               <button
-                onClick={() => setShowNFModal(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                onClick={() => {
+                  setShowNFModal(false);
+                  setSelectedFile(null);
+                  setUploadError('');
+                }}
+                disabled={uploading}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
               >
                 Cancelar
               </button>
+              {selectedFile && (
+                <button
+                  onClick={() => handleUploadSubmit(false)}
+                  disabled={uploading}
+                  className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {uploading ? (
+                    <span className="flex items-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Enviando...
+                    </span>
+                  ) : (
+                    'Enviar'
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -817,30 +896,61 @@ function BenefitCard({
               {/* Upload Section */}
               <div>
                 <h4 className="font-semibold text-text-primary mb-3">Selecionar Novo Arquivo</h4>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-500 transition-colors">
-                  <input
-                    type="file"
-                    id={`nf-replace-upload-${benefit.id}`}
-                    accept=".pdf,.xml"
-                    onChange={(e) => handleFileUpload(e, true)}
-                    disabled={uploading}
-                    className="hidden"
-                  />
-                  <label
-                    htmlFor={`nf-replace-upload-${benefit.id}`}
-                    className="cursor-pointer inline-flex flex-col items-center"
-                  >
-                    <svg className="w-12 h-12 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
-                    <span className="text-sm font-medium text-text-primary">
-                      {uploading ? 'Substituindo...' : 'Clique para selecionar o arquivo'}
-                    </span>
-                    <span className="text-xs text-text-muted mt-1">
-                      PDF ou XML (máx. 10MB)
-                    </span>
-                  </label>
-                </div>
+
+                {!selectedFile ? (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-500 transition-colors">
+                    <input
+                      type="file"
+                      id={`nf-replace-upload-${benefit.id}`}
+                      accept=".pdf,.xml"
+                      onChange={handleFileSelect}
+                      disabled={uploading}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor={`nf-replace-upload-${benefit.id}`}
+                      className="cursor-pointer inline-flex flex-col items-center"
+                    >
+                      <svg className="w-12 h-12 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <span className="text-sm font-medium text-text-primary">
+                        Clique para selecionar o arquivo
+                      </span>
+                      <span className="text-xs text-text-muted mt-1">
+                        PDF ou XML (máx. 10MB)
+                      </span>
+                    </label>
+                  </div>
+                ) : (
+                  <div className="border-2 border-primary-300 bg-primary-50 rounded-lg p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start space-x-3 flex-1">
+                        <svg className="w-10 h-10 text-primary-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-text-primary truncate">
+                            {selectedFile.name}
+                          </p>
+                          <p className="text-xs text-text-muted mt-1">
+                            {formatFileSize(selectedFile.size)}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setSelectedFile(null)}
+                        disabled={uploading}
+                        className="ml-3 text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50"
+                        title="Remover arquivo"
+                      >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {uploadError && (
                   <p className="mt-2 text-sm text-red-600">{uploadError}</p>
@@ -853,6 +963,7 @@ function BenefitCard({
               <button
                 onClick={() => {
                   setShowReplaceModal(false);
+                  setSelectedFile(null);
                   setUploadError('');
                 }}
                 disabled={uploading}
@@ -860,6 +971,25 @@ function BenefitCard({
               >
                 Cancelar
               </button>
+              {selectedFile && (
+                <button
+                  onClick={() => handleUploadSubmit(true)}
+                  disabled={uploading}
+                  className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {uploading ? (
+                    <span className="flex items-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Enviando...
+                    </span>
+                  ) : (
+                    'Substituir'
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>

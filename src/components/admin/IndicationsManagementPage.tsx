@@ -14,7 +14,8 @@ import {
   Phone,
   Mail,
   Calendar,
-  Users
+  Users,
+  AlertCircle
 } from 'lucide-react';
 import { supabase, formatDate, formatCNPJ, getIndicationStatusDisplay, getIndicationStatusColor, calculateBenefitDates } from '../../lib/supabase';
 import { ExpertIndication } from '../../types/database.types';
@@ -697,6 +698,19 @@ function IndicationDetailModal({ indication, admin, onClose, onUpdateStatus }: I
               ID: {indication.id.slice(0, 8)}...
             </span>
           </div>
+
+          {/* Motivo da Recusa - Quando indicação foi recusada */}
+          {indication.motivo_recusa && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-start space-x-2">
+                <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold text-red-900 mb-1">Motivo da Recusa:</p>
+                  <p className="text-sm text-red-800">{indication.motivo_recusa}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Company Info */}
           <div className="border-t border-gray-200 pt-6">

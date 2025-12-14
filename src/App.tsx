@@ -134,16 +134,20 @@ function AuthenticatedApp({ expert, onLogout, onUpdate }: { expert: ExpertUser; 
     setTotalBeneficiosPagos(paidBenefits?.reduce((sum, b) => sum + (b.valor_beneficio || 0), 0) || 0);
   };
 
+  const handleStatsUpdate = () => {
+    loadHeaderStats();
+  };
+
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard':
         return <Dashboard expert={expert} onNavigate={setCurrentPage} />;
       case 'indicacoes':
-        return <IndicationsPage expert={expert} onNavigate={setCurrentPage} />;
+        return <IndicationsPage expert={expert} onNavigate={setCurrentPage} onUpdate={handleStatsUpdate} />;
       case 'indicacoes:new':
-        return <IndicationsPage expert={expert} onNavigate={setCurrentPage} initialMode="new" />;
+        return <IndicationsPage expert={expert} onNavigate={setCurrentPage} initialMode="new" onUpdate={handleStatsUpdate} />;
       case 'beneficios':
-        return <BenefitsPage expert={expert} />;
+        return <BenefitsPage expert={expert} onUpdate={handleStatsUpdate} />;
       case 'curso':
         return <CoursePage expert={expert} onUpdate={onUpdate} />;
       case 'como-indicar':

@@ -468,6 +468,19 @@ export default function BenefitDetailModal({ benefit, admin, onClose, onUpdate }
             </div>
           </div>
 
+          {/* Motivo da Recusa da NF - Quando NF foi recusada */}
+          {benefit.status === 'nf_recusada' && benefit.nf_recusa_justificativa && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-start space-x-2">
+                <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold text-red-900 mb-1">Motivo da Recusa da NF:</p>
+                  <p className="text-sm text-red-800">{benefit.nf_recusa_justificativa}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Expert Info */}
           <div className="border-t border-gray-200 pt-6">
             <h4 className="font-semibold text-gray-900 mb-4 flex items-center">

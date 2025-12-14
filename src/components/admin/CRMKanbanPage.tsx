@@ -301,22 +301,22 @@ export const CRMKanbanPage: React.FC<CRMKanbanPageProps> = ({ admin }) => {
       </div>
 
       {/* Kanban Board */}
-      <div className="overflow-x-auto pb-4" style={{ height: 'calc(100vh - 350px)' }}>
-        <div className="inline-flex gap-4 min-w-full h-full">
+      <div className="overflow-x-auto pb-4">
+        <div className="inline-flex gap-4 min-w-full">
           {/* Column for indications without CRM status */}
           <div
-            className="flex-shrink-0 w-80 h-full"
+            className="flex-shrink-0 w-80"
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, null)}
           >
-            <div className="bg-gray-50 border-2 border-gray-300 rounded-lg p-4 h-full flex flex-col">
+            <div className="bg-gray-50 border-2 border-gray-300 rounded-lg p-4 flex flex-col min-h-[500px]">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-gray-900">Fazer contato</h3>
                 <span className="bg-white text-gray-700 text-xs font-medium px-2.5 py-0.5 rounded-full">
                   {getIndicationsByStatus(null).length}
                 </span>
               </div>
-              <div className="space-y-3 flex-1 overflow-y-auto">
+              <div className="space-y-3">
                 {getIndicationsByStatus(null).map(indication => (
                   <div
                     key={indication.id}
@@ -352,18 +352,18 @@ export const CRMKanbanPage: React.FC<CRMKanbanPageProps> = ({ admin }) => {
           {columns.slice(0, 7).map(column => (
             <div
               key={column.id}
-              className="flex-shrink-0 w-80 h-full"
+              className="flex-shrink-0 w-80"
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, column.id)}
             >
-              <div className={`${column.color} border-2 rounded-lg p-4 h-full flex flex-col`}>
+              <div className={`${column.color} border-2 rounded-lg p-4 flex flex-col min-h-[500px]`}>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-semibold text-gray-900">{column.title}</h3>
                   <span className="bg-white text-gray-700 text-xs font-medium px-2.5 py-0.5 rounded-full">
                     {getIndicationsByStatus(column.id).length}
                   </span>
                 </div>
-                <div className="space-y-3 flex-1 overflow-y-auto">
+                <div className="space-y-3">
                   {getIndicationsByStatus(column.id).map(indication => (
                     <div
                       key={indication.id}
@@ -397,12 +397,12 @@ export const CRMKanbanPage: React.FC<CRMKanbanPageProps> = ({ admin }) => {
           ))}
 
           {/* Contrato Assinado Column - Collapsible */}
-          <div className={`flex-shrink-0 h-full transition-all ${expandedAssinado ? 'w-80' : 'w-16'}`}>
-            <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4 h-full relative flex flex-col">
+          <div className={`flex-shrink-0 transition-all ${expandedAssinado ? 'w-80' : 'w-16'}`}>
+            <div className={`bg-green-50 border-2 border-green-300 rounded-lg p-4 relative flex flex-col ${expandedAssinado ? 'min-h-[500px]' : ''}`}>
               {!expandedAssinado ? (
                 <button
                   onClick={() => setExpandedAssinado(true)}
-                  className="absolute inset-0 flex flex-col items-center justify-center hover:bg-green-100 transition-colors"
+                  className="flex flex-col items-center justify-center hover:bg-green-100 transition-colors py-6"
                 >
                   <ChevronRight className="w-6 h-6 text-green-700" />
                   <span className="text-xs font-semibold text-green-700 mt-2" style={{ writingMode: 'vertical-rl' }}>
@@ -425,7 +425,7 @@ export const CRMKanbanPage: React.FC<CRMKanbanPageProps> = ({ admin }) => {
                       </button>
                     </div>
                   </div>
-                  <div className="space-y-3 flex-1 overflow-y-auto" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'contrato_assinado')}>
+                  <div className="space-y-3" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'contrato_assinado')}>
                     {getIndicationsByStatus('contrato_assinado').map(indication => (
                       <div
                         key={indication.id}
@@ -453,12 +453,12 @@ export const CRMKanbanPage: React.FC<CRMKanbanPageProps> = ({ admin }) => {
           </div>
 
           {/* Perdidos Column - Collapsible */}
-          <div className={`flex-shrink-0 h-full transition-all ${expandedPerdido ? 'w-80' : 'w-16'}`}>
-            <div className="bg-red-50 border-2 border-red-400 rounded-lg p-4 h-full relative flex flex-col">
+          <div className={`flex-shrink-0 transition-all ${expandedPerdido ? 'w-80' : 'w-16'}`}>
+            <div className={`bg-red-50 border-2 border-red-400 rounded-lg p-4 relative flex flex-col ${expandedPerdido ? 'min-h-[500px]' : ''}`}>
               {!expandedPerdido ? (
                 <button
                   onClick={() => setExpandedPerdido(true)}
-                  className="absolute inset-0 flex flex-col items-center justify-center hover:bg-red-100 transition-colors"
+                  className="flex flex-col items-center justify-center hover:bg-red-100 transition-colors py-6"
                 >
                   <ChevronRight className="w-6 h-6 text-red-700" />
                   <span className="text-xs font-semibold text-red-700 mt-2" style={{ writingMode: 'vertical-rl' }}>
@@ -481,7 +481,7 @@ export const CRMKanbanPage: React.FC<CRMKanbanPageProps> = ({ admin }) => {
                       </button>
                     </div>
                   </div>
-                  <div className="space-y-3 flex-1 overflow-y-auto" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'perdido')}>
+                  <div className="space-y-3" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'perdido')}>
                     {getIndicationsByStatus('perdido').map(indication => (
                       <div
                         key={indication.id}
